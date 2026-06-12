@@ -40,3 +40,14 @@ The project is designed to demonstrate real-world support workflows, role-based 
 ## Project Status
 
 Planning phase.
+
+## Local Development
+
+### Backend
+
+From the backend directory:
+
+```bash
+cd backend
+php artisan serve --host=127.0.0.1 --port=8080 --no-reload
+```
