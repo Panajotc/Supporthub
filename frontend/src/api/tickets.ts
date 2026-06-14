@@ -70,6 +70,23 @@ export async function getTickets(token: string): Promise<Ticket[]> {
   return (data as TicketListResponse).data;
 }
 
+export async function getTicket(token: string, ticketId: number): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Could not load ticket details.');
+  }
+
+  return (data as TicketResponse).data;
+}
+
 export async function createTicket(
   token: string,
   payload: CreateTicketPayload,

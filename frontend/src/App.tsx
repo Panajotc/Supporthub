@@ -4,6 +4,7 @@ import './App.css';
 import { login, type AuthUser } from './api/auth';
 import {
   createTicket,
+  getTicket,
   getTickets,
   type Ticket,
   type TicketPriority,
@@ -31,6 +32,10 @@ function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
+
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicketLoading, setSelectedTicketLoading] = useState(false);
+  const [selectedTicketError, setSelectedTicketError] = useState<string | null>(null);
 
   const [newTicketTitle, setNewTicketTitle] = useState('');
   const [newTicketDescription, setNewTicketDescription] = useState('');
@@ -123,6 +128,7 @@ function App() {
     setToken(null);
     setUser(null);
     setTickets([]);
+    setSelectedTicket(null);
     setCreateTicketSuccess(null);
     setCreateTicketError(null);
   }
@@ -161,6 +167,32 @@ function App() {
     } finally {
       setCreateTicketLoading(false);
     }
+  }
+
+  async function handleSelectTicket(ticketId: number) {
+    if (!token) {
+      setSelectedTicketError('You must be logged in to view ticket details.');
+      return;
+    }
+
+    setSelectedTicketLoading(true);
+    setSelectedTicketError(null);
+
+    try {
+      const ticketDetails = await getTicket(token, ticketId);
+      setSelectedTicket(ticketDetails);
+    } catch (caughtError) {
+      setSelectedTicketError(
+        caughtError instanceof Error ? caughtError.message : 'Could not load ticket details.',
+      );
+    } finally {
+      setSelectedTicketLoading(false);
+    }
+  }
+
+  function handleBackToTickets() {
+    setSelectedTicket(null);
+    setSelectedTicketError(null);
   }
 
   return (
@@ -218,8 +250,8 @@ function App() {
               <strong>{user.email}</strong>.
             </p>
             <p>
-              The frontend is using your saved token to load tickets and create new
-              tickets through the backend API.
+              The frontend is using your saved token to load tickets, create new
+              tickets, and view ticket details through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -264,93 +296,157 @@ function App() {
             <h2>Tickets from the Laravel API.</h2>
             <p>
               This list is loaded from <code>GET /api/tickets</code>. New tickets
-              are created with <code>POST /api/tickets</code>.
+              are created with <code>POST /api/tickets</code>. Clicking a ticket
+              loads <code>GET /api/tickets/{'{id}'}</code>.
             </p>
           </div>
 
-          <form className="create-ticket-card" onSubmit={handleCreateTicket}>
-            <h3>Create a new ticket</h3>
+          {selectedTicket ? (
+            <article className="ticket-detail-card">
+              <button className="secondary-button button-reset" onClick={handleBackToTickets}>
+                Back to tickets
+              </button>
 
-            <label>
-              Title
-              <input
-                type="text"
-                value={newTicketTitle}
-                onChange={(event) => setNewTicketTitle(event.target.value)}
-                placeholder="Example: Cannot access my billing page"
-                required
-              />
-            </label>
+              <div className="ticket-card-header">
+                <span>{selectedTicket.public_id}</span>
+                <span className={`ticket-status status-${selectedTicket.status}`}>
+                  {selectedTicket.status.replaceAll('_', ' ')}
+                </span>
+              </div>
 
-            <label>
-              Description
-              <textarea
-                value={newTicketDescription}
-                onChange={(event) => setNewTicketDescription(event.target.value)}
-                placeholder="Describe the customer issue clearly."
-                required
-              />
-            </label>
+              <h3>{selectedTicket.title}</h3>
+              <p>{selectedTicket.description}</p>
 
-            <label>
-              Priority
-              <select
-                value={newTicketPriority}
-                onChange={(event) => setNewTicketPriority(event.target.value as TicketPriority)}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </label>
+              <div className="ticket-meta">
+                <span>Priority: {selectedTicket.priority}</span>
+                <span>Customer: {selectedTicket.customer?.name ?? 'Unknown customer'}</span>
+                <span>Agent: {selectedTicket.assigned_agent?.name ?? 'Unassigned'}</span>
+                <span>Created: {new Date(selectedTicket.created_at).toLocaleString()}</span>
+              </div>
 
-            {createTicketError ? <p className="error-message">{createTicketError}</p> : null}
+              <div className="reply-section">
+                <h3>Replies</h3>
 
-            {createTicketSuccess ? (
-              <p className="success-message">{createTicketSuccess}</p>
-            ) : null}
+                {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
+                  <div className="reply-list">
+                    {selectedTicket.replies.map((reply) => (
+                      <article key={reply.id} className="reply-card">
+                        <div className="reply-header">
+                          <strong>{reply.user?.name ?? 'Unknown user'}</strong>
+                          <span>{new Date(reply.created_at).toLocaleString()}</span>
+                        </div>
 
-            <button
-              className="primary-button button-reset"
-              type="submit"
-              disabled={createTicketLoading}
-            >
-              {createTicketLoading ? 'Creating...' : 'Create ticket'}
-            </button>
-          </form>
+                        <p>{reply.body}</p>
 
-          {ticketsLoading ? <p className="muted-message">Loading tickets...</p> : null}
+                        {reply.is_internal ? (
+                          <span className="internal-note">Internal note</span>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted-message">No replies yet.</p>
+                )}
+              </div>
+            </article>
+          ) : (
+            <>
+              <form className="create-ticket-card" onSubmit={handleCreateTicket}>
+                <h3>Create a new ticket</h3>
 
-          {ticketsError ? <p className="error-message">{ticketsError}</p> : null}
+                <label>
+                  Title
+                  <input
+                    type="text"
+                    value={newTicketTitle}
+                    onChange={(event) => setNewTicketTitle(event.target.value)}
+                    placeholder="Example: Cannot access my billing page"
+                    required
+                  />
+                </label>
 
-          {!ticketsLoading && !ticketsError && tickets.length === 0 ? (
-            <p className="muted-message">No tickets found for this account.</p>
-          ) : null}
+                <label>
+                  Description
+                  <textarea
+                    value={newTicketDescription}
+                    onChange={(event) => setNewTicketDescription(event.target.value)}
+                    placeholder="Describe the customer issue clearly."
+                    required
+                  />
+                </label>
 
-          <div className="ticket-grid">
-            {tickets.map((ticket) => (
-              <article key={ticket.id} className="ticket-card">
-                <div className="ticket-card-header">
-                  <span>{ticket.public_id}</span>
-                  <span className={`ticket-status status-${ticket.status}`}>
-                    {ticket.status.replaceAll('_', ' ')}
-                  </span>
-                </div>
+                <label>
+                  Priority
+                  <select
+                    value={newTicketPriority}
+                    onChange={(event) => setNewTicketPriority(event.target.value as TicketPriority)}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </label>
 
-                <h3>{ticket.title}</h3>
+                {createTicketError ? <p className="error-message">{createTicketError}</p> : null}
 
-                <p>{ticket.description}</p>
+                {createTicketSuccess ? (
+                  <p className="success-message">{createTicketSuccess}</p>
+                ) : null}
 
-                <div className="ticket-meta">
-                  <span>Priority: {ticket.priority}</span>
-                  <span>Customer: {ticket.customer?.name ?? 'Unknown customer'}</span>
-                  <span>Agent: {ticket.assigned_agent?.name ?? 'Unassigned'}</span>
-                  <span>Replies: {ticket.replies?.length ?? 0}</span>
-                </div>
-              </article>
-            ))}
-          </div>
+                <button
+                  className="primary-button button-reset"
+                  type="submit"
+                  disabled={createTicketLoading}
+                >
+                  {createTicketLoading ? 'Creating...' : 'Create ticket'}
+                </button>
+              </form>
+
+              {selectedTicketLoading ? (
+                <p className="muted-message">Loading ticket details...</p>
+              ) : null}
+
+              {selectedTicketError ? <p className="error-message">{selectedTicketError}</p> : null}
+
+              {ticketsLoading ? <p className="muted-message">Loading tickets...</p> : null}
+
+              {ticketsError ? <p className="error-message">{ticketsError}</p> : null}
+
+              {!ticketsLoading && !ticketsError && tickets.length === 0 ? (
+                <p className="muted-message">No tickets found for this account.</p>
+              ) : null}
+
+              <div className="ticket-grid">
+                {tickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    className="ticket-card ticket-card-button"
+                    type="button"
+                    onClick={() => handleSelectTicket(ticket.id)}
+                  >
+                    <div className="ticket-card-header">
+                      <span>{ticket.public_id}</span>
+                      <span className={`ticket-status status-${ticket.status}`}>
+                        {ticket.status.replaceAll('_', ' ')}
+                      </span>
+                    </div>
+
+                    <h3>{ticket.title}</h3>
+
+                    <p>{ticket.description}</p>
+
+                    <div className="ticket-meta">
+                      <span>Priority: {ticket.priority}</span>
+                      <span>Customer: {ticket.customer?.name ?? 'Unknown customer'}</span>
+                      <span>Agent: {ticket.assigned_agent?.name ?? 'Unassigned'}</span>
+                      <span>Replies: {ticket.replies?.length ?? 0}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       ) : null}
 
