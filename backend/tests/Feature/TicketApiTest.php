@@ -84,6 +84,23 @@ class TicketApiTest extends TestCase
         $response->assertJsonPath('data.title', 'Ticket detail test');
     }
 
+    public function test_customer_cannot_view_another_customers_ticket(): void
+    {
+        $customer = $this->createUser(UserRole::Customer);
+        $otherCustomer = $this->createUser(UserRole::Customer);
+
+        $ticket = $this->createTicket($otherCustomer, [
+            'title' => 'Private ticket owned by another customer',
+        ]);
+
+        $response = $this
+            ->withTokenFor($customer)
+            ->getJson('/api/tickets/' . $ticket->id);
+
+        $response->assertForbidden();
+        $response->assertJsonPath('message', 'This action is unauthorized.');
+    }
+
     public function test_customer_can_reply_to_own_ticket(): void
     {
         $customer = $this->createUser(UserRole::Customer);
@@ -105,6 +122,22 @@ class TicketApiTest extends TestCase
             'body' => 'This is a test reply.',
             'is_internal' => false,
         ]);
+    }
+
+    public function test_customer_cannot_reply_to_another_customers_ticket(): void
+    {
+        $customer = $this->createUser(UserRole::Customer);
+        $otherCustomer = $this->createUser(UserRole::Customer);
+
+        $ticket = $this->createTicket($otherCustomer);
+
+        $response = $this
+            ->withTokenFor($customer)
+            ->postJson('/api/tickets/' . $ticket->id . '/replies', [
+                'body' => 'Trying to reply to another customer ticket.',
+            ]);
+
+        $response->assertForbidden();
     }
 
     public function test_customer_cannot_update_ticket_status(): void
