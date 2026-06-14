@@ -13,14 +13,19 @@ use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\TicketStatusHistory;
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TicketController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Ticket::class);
+
         $user = $request->user();
 
         $query = Ticket::query()
@@ -36,6 +41,8 @@ class TicketController extends Controller
 
     public function store(StoreTicketRequest $request): JsonResponse
     {
+        $this->authorize('create', Ticket::class);
+
         $user = $request->user();
 
         $ticket = Ticket::query()->create([
@@ -67,11 +74,7 @@ class TicketController extends Controller
 
     public function show(Request $request, Ticket $ticket): TicketResource
     {
-        $user = $request->user();
-
-        if ($user->role === UserRole::Customer && $ticket->customer_id !== $user->id) {
-            abort(403, 'You are not allowed to view this ticket.');
-        }
+        $this->authorize('view', $ticket);
 
         $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
 
@@ -80,11 +83,9 @@ class TicketController extends Controller
 
     public function updateStatus(UpdateTicketStatusRequest $request, Ticket $ticket): JsonResponse
     {
-        $user = $request->user();
+        $this->authorize('updateStatus', $ticket);
 
-        if ($user->role === UserRole::Customer) {
-            abort(403, 'Customers cannot update ticket status.');
-        }
+        $user = $request->user();
 
         $oldStatus = $ticket->status;
         $newStatus = TicketStatus::from($request->validated('status'));
@@ -127,11 +128,9 @@ class TicketController extends Controller
 
     public function assign(AssignTicketRequest $request, Ticket $ticket): JsonResponse
     {
-        $user = $request->user();
+        $this->authorize('assign', $ticket);
 
-        if ($user->role === UserRole::Customer) {
-            abort(403, 'Customers cannot assign tickets.');
-        }
+        $user = $request->user();
 
         $assignedAgent = User::query()->findOrFail($request->validated('assigned_agent_id'));
 

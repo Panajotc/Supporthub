@@ -119,7 +119,7 @@ class TicketApiTest extends TestCase
             ]);
 
         $response->assertForbidden();
-        $response->assertJsonPath('message', 'Customers cannot update ticket status.');
+        $response->assertJsonPath('message', 'This action is unauthorized.');
     }
 
     public function test_agent_can_update_ticket_status(): void
@@ -165,7 +165,7 @@ class TicketApiTest extends TestCase
             ]);
 
         $response->assertForbidden();
-        $response->assertJsonPath('message', 'Customers cannot assign tickets.');
+        $response->assertJsonPath('message', 'This action is unauthorized.');
     }
 
     public function test_agent_can_assign_ticket(): void
