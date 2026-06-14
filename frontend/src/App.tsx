@@ -4,6 +4,7 @@ import './App.css';
 import { login, type AuthUser } from './api/auth';
 import {
   createTicket,
+  createTicketReply,
   getTicket,
   getTickets,
   type Ticket,
@@ -44,6 +45,13 @@ function App() {
   const [createTicketLoading, setCreateTicketLoading] = useState(false);
   const [createTicketError, setCreateTicketError] = useState<string | null>(null);
   const [createTicketSuccess, setCreateTicketSuccess] = useState<string | null>(null);
+
+  const [newReplyBody, setNewReplyBody] = useState('');
+  const [newReplyIsInternal, setNewReplyIsInternal] = useState(false);
+
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const [replySuccess, setReplySuccess] = useState<string | null>(null);
 
   const demoAccounts = [
     {
@@ -131,6 +139,8 @@ function App() {
     setSelectedTicket(null);
     setCreateTicketSuccess(null);
     setCreateTicketError(null);
+    setReplySuccess(null);
+    setReplyError(null);
   }
 
   async function handleCreateTicket(event: React.FormEvent<HTMLFormElement>) {
@@ -177,6 +187,8 @@ function App() {
 
     setSelectedTicketLoading(true);
     setSelectedTicketError(null);
+    setReplySuccess(null);
+    setReplyError(null);
 
     try {
       const ticketDetails = await getTicket(token, ticketId);
@@ -193,6 +205,45 @@ function App() {
   function handleBackToTickets() {
     setSelectedTicket(null);
     setSelectedTicketError(null);
+    setReplySuccess(null);
+    setReplyError(null);
+    setNewReplyBody('');
+    setNewReplyIsInternal(false);
+  }
+
+  async function handleCreateReply(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token || !selectedTicket) {
+      setReplyError('You must select a ticket before replying.');
+      return;
+    }
+
+    setReplyLoading(true);
+    setReplyError(null);
+    setReplySuccess(null);
+
+    try {
+      await createTicketReply(token, selectedTicket.id, {
+        body: newReplyBody,
+        is_internal: newReplyIsInternal,
+      });
+
+      const updatedTicket = await getTicket(token, selectedTicket.id);
+      setSelectedTicket(updatedTicket);
+
+      const loadedTickets = await getTickets(token);
+      setTickets(loadedTickets);
+
+      setNewReplyBody('');
+      setNewReplyIsInternal(false);
+
+      setReplySuccess('Reply added successfully.');
+    } catch (caughtError) {
+      setReplyError(caughtError instanceof Error ? caughtError.message : 'Could not add reply.');
+    } finally {
+      setReplyLoading(false);
+    }
   }
 
   return (
@@ -251,7 +302,7 @@ function App() {
             </p>
             <p>
               The frontend is using your saved token to load tickets, create new
-              tickets, and view ticket details through the backend API.
+              tickets, view ticket details, and add replies through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -297,7 +348,8 @@ function App() {
             <p>
               This list is loaded from <code>GET /api/tickets</code>. New tickets
               are created with <code>POST /api/tickets</code>. Clicking a ticket
-              loads <code>GET /api/tickets/{'{id}'}</code>.
+              loads <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
+              <code>POST /api/tickets/{'{id}'}/replies</code>.
             </p>
           </div>
 
@@ -322,6 +374,43 @@ function App() {
                 <span>Customer: {selectedTicket.customer?.name ?? 'Unknown customer'}</span>
                 <span>Agent: {selectedTicket.assigned_agent?.name ?? 'Unassigned'}</span>
                 <span>Created: {new Date(selectedTicket.created_at).toLocaleString()}</span>
+              </div>
+
+              <div className="reply-section">
+                <h3>Add a reply</h3>
+
+                <form className="reply-form" onSubmit={handleCreateReply}>
+                  <label>
+                    Reply message
+                    <textarea
+                      value={newReplyBody}
+                      onChange={(event) => setNewReplyBody(event.target.value)}
+                      placeholder="Write a clear support reply."
+                      required
+                    />
+                  </label>
+
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={newReplyIsInternal}
+                      onChange={(event) => setNewReplyIsInternal(event.target.checked)}
+                    />
+                    Internal note
+                  </label>
+
+                  {replyError ? <p className="error-message">{replyError}</p> : null}
+
+                  {replySuccess ? <p className="success-message">{replySuccess}</p> : null}
+
+                  <button
+                    className="primary-button button-reset"
+                    type="submit"
+                    disabled={replyLoading}
+                  >
+                    {replyLoading ? 'Adding reply...' : 'Add reply'}
+                  </button>
+                </form>
               </div>
 
               <div className="reply-section">
