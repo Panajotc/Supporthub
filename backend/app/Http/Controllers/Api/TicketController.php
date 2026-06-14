@@ -6,11 +6,13 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tickets\AssignTicketRequest;
 use App\Http\Requests\Tickets\StoreTicketRequest;
 use App\Http\Requests\Tickets\UpdateTicketStatusRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\TicketStatusHistory;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -119,6 +121,32 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket status updated successfully.',
+            'ticket' => new TicketResource($ticket),
+        ]);
+    }
+
+    public function assign(AssignTicketRequest $request, Ticket $ticket): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === UserRole::Customer) {
+            abort(403, 'Customers cannot assign tickets.');
+        }
+
+        $assignedAgent = User::query()->findOrFail($request->validated('assigned_agent_id'));
+
+        if ($assignedAgent->role !== UserRole::Agent) {
+            abort(422, 'Tickets can only be assigned to agents.');
+        }
+
+        $ticket->assigned_agent_id = $assignedAgent->id;
+        $ticket->updated_by = $user->id;
+        $ticket->save();
+
+        $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
+
+        return response()->json([
+            'message' => 'Ticket assigned successfully.',
             'ticket' => new TicketResource($ticket),
         ]);
     }
