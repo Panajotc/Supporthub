@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 
 import './App.css';
 import { login, type AuthUser } from './api/auth';
-import { getTickets, type Ticket } from './api/tickets';
+import {
+  createTicket,
+  getTickets,
+  type Ticket,
+  type TicketPriority,
+} from './api/tickets';
 
 const TOKEN_STORAGE_KEY = 'supporthub_token';
 const USER_STORAGE_KEY = 'supporthub_user';
@@ -26,6 +31,14 @@ function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
+
+  const [newTicketTitle, setNewTicketTitle] = useState('');
+  const [newTicketDescription, setNewTicketDescription] = useState('');
+  const [newTicketPriority, setNewTicketPriority] = useState<TicketPriority>('medium');
+
+  const [createTicketLoading, setCreateTicketLoading] = useState(false);
+  const [createTicketError, setCreateTicketError] = useState<string | null>(null);
+  const [createTicketSuccess, setCreateTicketSuccess] = useState<string | null>(null);
 
   const demoAccounts = [
     {
@@ -110,6 +123,44 @@ function App() {
     setToken(null);
     setUser(null);
     setTickets([]);
+    setCreateTicketSuccess(null);
+    setCreateTicketError(null);
+  }
+
+  async function handleCreateTicket(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token) {
+      setCreateTicketError('You must be logged in to create a ticket.');
+      return;
+    }
+
+    setCreateTicketLoading(true);
+    setCreateTicketError(null);
+    setCreateTicketSuccess(null);
+
+    try {
+      await createTicket(token, {
+        title: newTicketTitle,
+        description: newTicketDescription,
+        priority: newTicketPriority,
+      });
+
+      const loadedTickets = await getTickets(token);
+      setTickets(loadedTickets);
+
+      setNewTicketTitle('');
+      setNewTicketDescription('');
+      setNewTicketPriority('medium');
+
+      setCreateTicketSuccess('Ticket created successfully.');
+    } catch (caughtError) {
+      setCreateTicketError(
+        caughtError instanceof Error ? caughtError.message : 'Could not create ticket.',
+      );
+    } finally {
+      setCreateTicketLoading(false);
+    }
   }
 
   return (
@@ -167,8 +218,8 @@ function App() {
               <strong>{user.email}</strong>.
             </p>
             <p>
-              The frontend is now using your saved token to load tickets from the
-              backend API.
+              The frontend is using your saved token to load tickets and create new
+              tickets through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -212,10 +263,62 @@ function App() {
             <p className="eyebrow">Ticket dashboard</p>
             <h2>Tickets from the Laravel API.</h2>
             <p>
-              This list is loaded from <code>GET /api/tickets</code> using the token
-              saved after login.
+              This list is loaded from <code>GET /api/tickets</code>. New tickets
+              are created with <code>POST /api/tickets</code>.
             </p>
           </div>
+
+          <form className="create-ticket-card" onSubmit={handleCreateTicket}>
+            <h3>Create a new ticket</h3>
+
+            <label>
+              Title
+              <input
+                type="text"
+                value={newTicketTitle}
+                onChange={(event) => setNewTicketTitle(event.target.value)}
+                placeholder="Example: Cannot access my billing page"
+                required
+              />
+            </label>
+
+            <label>
+              Description
+              <textarea
+                value={newTicketDescription}
+                onChange={(event) => setNewTicketDescription(event.target.value)}
+                placeholder="Describe the customer issue clearly."
+                required
+              />
+            </label>
+
+            <label>
+              Priority
+              <select
+                value={newTicketPriority}
+                onChange={(event) => setNewTicketPriority(event.target.value as TicketPriority)}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </label>
+
+            {createTicketError ? <p className="error-message">{createTicketError}</p> : null}
+
+            {createTicketSuccess ? (
+              <p className="success-message">{createTicketSuccess}</p>
+            ) : null}
+
+            <button
+              className="primary-button button-reset"
+              type="submit"
+              disabled={createTicketLoading}
+            >
+              {createTicketLoading ? 'Creating...' : 'Create ticket'}
+            </button>
+          </form>
 
           {ticketsLoading ? <p className="muted-message">Loading tickets...</p> : null}
 
@@ -239,14 +342,12 @@ function App() {
 
                 <p>{ticket.description}</p>
 
-               <div className="ticket-meta">
-  <span>Priority: {ticket.priority}</span>
-  <span>Customer: {ticket.customer?.name ?? 'Unknown customer'}</span>
-  <span>
-    Agent: {ticket.assigned_agent?.name ?? 'Unassigned'}
-  </span>
-  <span>Replies: {ticket.replies?.length ?? 0}</span>
-</div>
+                <div className="ticket-meta">
+                  <span>Priority: {ticket.priority}</span>
+                  <span>Customer: {ticket.customer?.name ?? 'Unknown customer'}</span>
+                  <span>Agent: {ticket.assigned_agent?.name ?? 'Unassigned'}</span>
+                  <span>Replies: {ticket.replies?.length ?? 0}</span>
+                </div>
               </article>
             ))}
           </div>

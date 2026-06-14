@@ -30,7 +30,7 @@ export type Ticket = {
   assigned_agent: AuthUser | null;
   created_by: AuthUser | null;
   updated_by: AuthUser | null;
-  replies: TicketReply[];
+  replies?: TicketReply[];
   resolved_at: string | null;
   closed_at: string | null;
   created_at: string;
@@ -39,6 +39,16 @@ export type Ticket = {
 
 export type TicketListResponse = {
   data: Ticket[];
+};
+
+export type TicketResponse = {
+  data: Ticket;
+};
+
+export type CreateTicketPayload = {
+  title: string;
+  description: string;
+  priority: TicketPriority;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -58,4 +68,27 @@ export async function getTickets(token: string): Promise<Ticket[]> {
   }
 
   return (data as TicketListResponse).data;
+}
+
+export async function createTicket(
+  token: string,
+  payload: CreateTicketPayload,
+): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Could not create ticket.');
+  }
+
+  return (data as TicketResponse).data;
 }
