@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import './App.css';
 import { login, type AuthUser } from './api/auth';
+import { getTickets, type Ticket } from './api/tickets';
 
 const TOKEN_STORAGE_KEY = 'supporthub_token';
 const USER_STORAGE_KEY = 'supporthub_user';
@@ -13,10 +14,18 @@ function App() {
     return storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
   });
 
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  });
+
   const [email, setEmail] = useState('agent@supporthub.test');
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
 
   const demoAccounts = [
     {
@@ -45,6 +54,31 @@ function App() {
     'GitHub Actions CI',
   ];
 
+  useEffect(() => {
+    async function loadTickets() {
+      if (!token || !user) {
+        setTickets([]);
+        return;
+      }
+
+      setTicketsLoading(true);
+      setTicketsError(null);
+
+      try {
+        const loadedTickets = await getTickets(token);
+        setTickets(loadedTickets);
+      } catch (caughtError) {
+        setTicketsError(
+          caughtError instanceof Error ? caughtError.message : 'Could not load tickets.',
+        );
+      } finally {
+        setTicketsLoading(false);
+      }
+    }
+
+    loadTickets();
+  }, [token, user]);
+
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -60,6 +94,7 @@ function App() {
       localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
 
+      setToken(response.token);
       setUser(response.user);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Login failed.');
@@ -72,7 +107,9 @@ function App() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
 
+    setToken(null);
     setUser(null);
+    setTickets([]);
   }
 
   return (
@@ -116,8 +153,8 @@ function App() {
           <p className="eyebrow">API login</p>
           <h2>Connect React to Laravel Sanctum.</h2>
           <p>
-            Use one of the seeded demo users. The frontend will call the real
-            Laravel <code>/api/login</code> endpoint and store the returned token.
+            Use one of the seeded demo users. The frontend calls the real Laravel{' '}
+            <code>/api/login</code> endpoint and stores the returned token.
           </p>
         </div>
 
@@ -130,7 +167,8 @@ function App() {
               <strong>{user.email}</strong>.
             </p>
             <p>
-              Next we will use this token to load tickets from the backend API.
+              The frontend is now using your saved token to load tickets from the
+              backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -167,6 +205,53 @@ function App() {
           </form>
         )}
       </section>
+
+      {user ? (
+        <section className="tickets-section">
+          <div className="section-heading">
+            <p className="eyebrow">Ticket dashboard</p>
+            <h2>Tickets from the Laravel API.</h2>
+            <p>
+              This list is loaded from <code>GET /api/tickets</code> using the token
+              saved after login.
+            </p>
+          </div>
+
+          {ticketsLoading ? <p className="muted-message">Loading tickets...</p> : null}
+
+          {ticketsError ? <p className="error-message">{ticketsError}</p> : null}
+
+          {!ticketsLoading && !ticketsError && tickets.length === 0 ? (
+            <p className="muted-message">No tickets found for this account.</p>
+          ) : null}
+
+          <div className="ticket-grid">
+            {tickets.map((ticket) => (
+              <article key={ticket.id} className="ticket-card">
+                <div className="ticket-card-header">
+                  <span>{ticket.public_id}</span>
+                  <span className={`ticket-status status-${ticket.status}`}>
+                    {ticket.status.replaceAll('_', ' ')}
+                  </span>
+                </div>
+
+                <h3>{ticket.title}</h3>
+
+                <p>{ticket.description}</p>
+
+               <div className="ticket-meta">
+  <span>Priority: {ticket.priority}</span>
+  <span>Customer: {ticket.customer?.name ?? 'Unknown customer'}</span>
+  <span>
+    Agent: {ticket.assigned_agent?.name ?? 'Unassigned'}
+  </span>
+  <span>Replies: {ticket.replies?.length ?? 0}</span>
+</div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section id="backend-status" className="section-grid">
         <div className="section-heading">
