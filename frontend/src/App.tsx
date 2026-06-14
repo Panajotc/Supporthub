@@ -1,6 +1,23 @@
+import { useState } from 'react';
+
 import './App.css';
+import { login, type AuthUser } from './api/auth';
+
+const TOKEN_STORAGE_KEY = 'supporthub_token';
+const USER_STORAGE_KEY = 'supporthub_user';
 
 function App() {
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+
+    return storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
+  });
+
+  const [email, setEmail] = useState('agent@supporthub.test');
+  const [password, setPassword] = useState('password');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const demoAccounts = [
     {
       role: 'Admin',
@@ -28,6 +45,36 @@ function App() {
     'GitHub Actions CI',
   ];
 
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await login({
+        email,
+        password,
+      });
+
+      localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
+
+      setUser(response.user);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Login failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+
+    setUser(null);
+  }
+
   return (
     <main className="app-shell">
       <section className="hero-section">
@@ -42,8 +89,8 @@ function App() {
           </p>
 
           <div className="hero-actions">
-            <a href="#demo-accounts" className="primary-button">
-              View demo accounts
+            <a href="#login" className="primary-button">
+              Login to demo
             </a>
 
             <a href="#backend-status" className="secondary-button">
@@ -62,6 +109,63 @@ function App() {
 
           <div className="status-pill">17 tests passing</div>
         </div>
+      </section>
+
+      <section id="login" className="login-section">
+        <div className="section-heading">
+          <p className="eyebrow">API login</p>
+          <h2>Connect React to Laravel Sanctum.</h2>
+          <p>
+            Use one of the seeded demo users. The frontend will call the real
+            Laravel <code>/api/login</code> endpoint and store the returned token.
+          </p>
+        </div>
+
+        {user ? (
+          <div className="dashboard-preview">
+            <p className="card-label">Signed in</p>
+            <h3>Welcome, {user.name}</h3>
+            <p>
+              You are logged in as <strong>{user.role}</strong> using{' '}
+              <strong>{user.email}</strong>.
+            </p>
+            <p>
+              Next we will use this token to load tickets from the backend API.
+            </p>
+
+            <button className="secondary-button button-reset" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        ) : (
+          <form className="login-card" onSubmit={handleLogin}>
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </label>
+
+            {error ? <p className="error-message">{error}</p> : null}
+
+            <button className="primary-button button-reset" type="submit" disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+        )}
       </section>
 
       <section id="backend-status" className="section-grid">
@@ -87,10 +191,10 @@ function App() {
       <section id="demo-accounts" className="demo-section">
         <div className="section-heading">
           <p className="eyebrow">Demo users</p>
-          <h2>Ready for real API login next.</h2>
+          <h2>Seeded backend accounts.</h2>
           <p>
-            These accounts are seeded by the Laravel backend and will be used when
-            we connect the login form.
+            These accounts are created by the Laravel seeder and can be used to test
+            role-based workflows.
           </p>
         </div>
 
