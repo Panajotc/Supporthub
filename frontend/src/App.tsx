@@ -7,8 +7,10 @@ import {
   createTicketReply,
   getTicket,
   getTickets,
+  updateTicketStatus,
   type Ticket,
   type TicketPriority,
+  type TicketStatus,
 } from './api/tickets';
 
 const TOKEN_STORAGE_KEY = 'supporthub_token';
@@ -52,6 +54,12 @@ function App() {
   const [replyLoading, setReplyLoading] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
   const [replySuccess, setReplySuccess] = useState<string | null>(null);
+
+  const [newTicketStatus, setNewTicketStatus] = useState<TicketStatus>('open');
+
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
 
   const demoAccounts = [
     {
@@ -105,6 +113,12 @@ function App() {
     loadTickets();
   }, [token, user]);
 
+  useEffect(() => {
+    if (selectedTicket) {
+      setNewTicketStatus(selectedTicket.status);
+    }
+  }, [selectedTicket]);
+
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -141,6 +155,8 @@ function App() {
     setCreateTicketError(null);
     setReplySuccess(null);
     setReplyError(null);
+    setStatusSuccess(null);
+    setStatusError(null);
   }
 
   async function handleCreateTicket(event: React.FormEvent<HTMLFormElement>) {
@@ -189,6 +205,8 @@ function App() {
     setSelectedTicketError(null);
     setReplySuccess(null);
     setReplyError(null);
+    setStatusSuccess(null);
+    setStatusError(null);
 
     try {
       const ticketDetails = await getTicket(token, ticketId);
@@ -207,6 +225,8 @@ function App() {
     setSelectedTicketError(null);
     setReplySuccess(null);
     setReplyError(null);
+    setStatusSuccess(null);
+    setStatusError(null);
     setNewReplyBody('');
     setNewReplyIsInternal(false);
   }
@@ -243,6 +263,39 @@ function App() {
       setReplyError(caughtError instanceof Error ? caughtError.message : 'Could not add reply.');
     } finally {
       setReplyLoading(false);
+    }
+  }
+
+  async function handleUpdateStatus(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token || !selectedTicket) {
+      setStatusError('You must select a ticket before updating status.');
+      return;
+    }
+
+    setStatusLoading(true);
+    setStatusError(null);
+    setStatusSuccess(null);
+
+    try {
+      await updateTicketStatus(token, selectedTicket.id, {
+        status: newTicketStatus,
+      });
+
+      const updatedTicket = await getTicket(token, selectedTicket.id);
+      setSelectedTicket(updatedTicket);
+
+      const loadedTickets = await getTickets(token);
+      setTickets(loadedTickets);
+
+      setStatusSuccess('Ticket status updated successfully.');
+    } catch (caughtError) {
+      setStatusError(
+        caughtError instanceof Error ? caughtError.message : 'Could not update ticket status.',
+      );
+    } finally {
+      setStatusLoading(false);
     }
   }
 
@@ -302,7 +355,8 @@ function App() {
             </p>
             <p>
               The frontend is using your saved token to load tickets, create new
-              tickets, view ticket details, and add replies through the backend API.
+              tickets, view ticket details, add replies, and update statuses through
+              the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -349,7 +403,8 @@ function App() {
               This list is loaded from <code>GET /api/tickets</code>. New tickets
               are created with <code>POST /api/tickets</code>. Clicking a ticket
               loads <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
-              <code>POST /api/tickets/{'{id}'}/replies</code>.
+              <code>POST /api/tickets/{'{id}'}/replies</code>. Status updates use{' '}
+              <code>PATCH /api/tickets/{'{id}'}/status</code>.
             </p>
           </div>
 
@@ -374,6 +429,38 @@ function App() {
                 <span>Customer: {selectedTicket.customer?.name ?? 'Unknown customer'}</span>
                 <span>Agent: {selectedTicket.assigned_agent?.name ?? 'Unassigned'}</span>
                 <span>Created: {new Date(selectedTicket.created_at).toLocaleString()}</span>
+              </div>
+
+              <div className="reply-section">
+                <h3>Update status</h3>
+
+                <form className="status-form" onSubmit={handleUpdateStatus}>
+                  <label>
+                    Status
+                    <select
+                      value={newTicketStatus}
+                      onChange={(event) => setNewTicketStatus(event.target.value as TicketStatus)}
+                    >
+                      <option value="open">Open</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="waiting_for_customer">Waiting for customer</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </label>
+
+                  {statusError ? <p className="error-message">{statusError}</p> : null}
+
+                  {statusSuccess ? <p className="success-message">{statusSuccess}</p> : null}
+
+                  <button
+                    className="primary-button button-reset"
+                    type="submit"
+                    disabled={statusLoading}
+                  >
+                    {statusLoading ? 'Updating...' : 'Update status'}
+                  </button>
+                </form>
               </div>
 
               <div className="reply-section">
