@@ -8,6 +8,21 @@ The project models a realistic support workflow where customers create tickets, 
 
 ## Demo Workflow
 
+## Screenshots
+
+### Login Screen
+
+![SupportHub login screen](docs/screenshots/login.png)
+
+### Ticket Dashboard
+
+![SupportHub ticket dashboard](docs/screenshots/tickets.png)
+
+### Ticket Detail
+
+![SupportHub ticket detail screen](docs/screenshots/ticket-detail.png)
+
+
 SupportHub currently supports a working end-to-end support flow:
 
 * Login with seeded demo users
