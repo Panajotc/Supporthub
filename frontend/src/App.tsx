@@ -37,6 +37,10 @@ function App() {
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
 
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
+
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedTicketLoading, setSelectedTicketLoading] = useState(false);
   const [selectedTicketError, setSelectedTicketError] = useState<string | null>(null);
@@ -94,6 +98,28 @@ function App() {
     'Automated tests',
     'GitHub Actions CI',
   ];
+
+  const normalizedTicketSearch = ticketSearch.trim().toLowerCase();
+
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch =
+      normalizedTicketSearch === '' ||
+      ticket.public_id.toLowerCase().includes(normalizedTicketSearch) ||
+      ticket.title.toLowerCase().includes(normalizedTicketSearch) ||
+      ticket.description.toLowerCase().includes(normalizedTicketSearch);
+
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+
+    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  function handleClearFilters() {
+    setTicketSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+  }
 
   useEffect(() => {
     async function loadTickets() {
@@ -662,6 +688,66 @@ function App() {
                 </button>
               </form>
 
+              <div className="ticket-filter-card">
+                <h3>Filter tickets</h3>
+
+                <div className="ticket-filter-grid">
+                  <label>
+                    Search
+                    <input
+                      type="search"
+                      value={ticketSearch}
+                      onChange={(event) => setTicketSearch(event.target.value)}
+                      placeholder="Search by ID, title, or description"
+                    />
+                  </label>
+
+                  <label>
+                    Status
+                    <select
+                      value={statusFilter}
+                      onChange={(event) => setStatusFilter(event.target.value as TicketStatus | 'all')}
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="open">Open</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="waiting_for_customer">Waiting for customer</option>
+                      <option value="resolved">Resolved</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Priority
+                    <select
+                      value={priorityFilter}
+                      onChange={(event) => setPriorityFilter(event.target.value as TicketPriority | 'all')}
+                    >
+                      <option value="all">All priorities</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="ticket-filter-actions">
+                  <p>
+                    Showing <strong>{filteredTickets.length}</strong> of <strong>{tickets.length}</strong>{' '}
+                    tickets.
+                  </p>
+
+                  <button
+                    className="secondary-button button-reset"
+                    type="button"
+                    onClick={handleClearFilters}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              </div>
+
               {selectedTicketLoading ? (
                 <p className="muted-message">Loading ticket details...</p>
               ) : null}
@@ -676,8 +762,12 @@ function App() {
                 <p className="muted-message">No tickets found for this account.</p>
               ) : null}
 
+              {!ticketsLoading && !ticketsError && tickets.length > 0 && filteredTickets.length === 0 ? (
+                <p className="muted-message">No tickets match the current filters.</p>
+              ) : null}
+
               <div className="ticket-grid">
-                {tickets.map((ticket) => (
+                {filteredTickets.map((ticket) => (
                   <button
                     key={ticket.id}
                     className="ticket-card ticket-card-button"
