@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import { login, type AuthUser } from './api/auth';
 import {
+  assignTicket,
   createTicket,
   createTicketReply,
   getTicket,
@@ -61,6 +62,12 @@ function App() {
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
 
+  const [assignedAgentId, setAssignedAgentId] = useState('unassigned');
+
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assignmentSuccess, setAssignmentSuccess] = useState<string | null>(null);
+
   const demoAccounts = [
     {
       role: 'Admin',
@@ -116,6 +123,9 @@ function App() {
   useEffect(() => {
     if (selectedTicket) {
       setNewTicketStatus(selectedTicket.status);
+      setAssignedAgentId(
+        selectedTicket.assigned_agent ? String(selectedTicket.assigned_agent.id) : 'unassigned',
+      );
     }
   }, [selectedTicket]);
 
@@ -157,6 +167,8 @@ function App() {
     setReplyError(null);
     setStatusSuccess(null);
     setStatusError(null);
+    setAssignmentSuccess(null);
+    setAssignmentError(null);
   }
 
   async function handleCreateTicket(event: React.FormEvent<HTMLFormElement>) {
@@ -207,6 +219,8 @@ function App() {
     setReplyError(null);
     setStatusSuccess(null);
     setStatusError(null);
+    setAssignmentSuccess(null);
+    setAssignmentError(null);
 
     try {
       const ticketDetails = await getTicket(token, ticketId);
@@ -227,6 +241,8 @@ function App() {
     setReplyError(null);
     setStatusSuccess(null);
     setStatusError(null);
+    setAssignmentSuccess(null);
+    setAssignmentError(null);
     setNewReplyBody('');
     setNewReplyIsInternal(false);
   }
@@ -299,6 +315,39 @@ function App() {
     }
   }
 
+  async function handleAssignTicket(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token || !selectedTicket) {
+      setAssignmentError('You must select a ticket before assigning it.');
+      return;
+    }
+
+    setAssignmentLoading(true);
+    setAssignmentError(null);
+    setAssignmentSuccess(null);
+
+    try {
+      await assignTicket(token, selectedTicket.id, {
+        assigned_agent_id: assignedAgentId === 'unassigned' ? null : Number(assignedAgentId),
+      });
+
+      const updatedTicket = await getTicket(token, selectedTicket.id);
+      setSelectedTicket(updatedTicket);
+
+      const loadedTickets = await getTickets(token);
+      setTickets(loadedTickets);
+
+      setAssignmentSuccess('Ticket assignment updated successfully.');
+    } catch (caughtError) {
+      setAssignmentError(
+        caughtError instanceof Error ? caughtError.message : 'Could not assign ticket.',
+      );
+    } finally {
+      setAssignmentLoading(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="hero-section">
@@ -355,8 +404,8 @@ function App() {
             </p>
             <p>
               The frontend is using your saved token to load tickets, create new
-              tickets, view ticket details, add replies, and update statuses through
-              the backend API.
+              tickets, view ticket details, add replies, update statuses, and assign
+              tickets through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -404,7 +453,8 @@ function App() {
               are created with <code>POST /api/tickets</code>. Clicking a ticket
               loads <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
               <code>POST /api/tickets/{'{id}'}/replies</code>. Status updates use{' '}
-              <code>PATCH /api/tickets/{'{id}'}/status</code>.
+              <code>PATCH /api/tickets/{'{id}'}/status</code>. Assignments use{' '}
+              <code>PATCH /api/tickets/{'{id}'}/assign</code>.
             </p>
           </div>
 
@@ -430,6 +480,39 @@ function App() {
                 <span>Agent: {selectedTicket.assigned_agent?.name ?? 'Unassigned'}</span>
                 <span>Created: {new Date(selectedTicket.created_at).toLocaleString()}</span>
               </div>
+
+              {user.role !== 'customer' ? (
+                <div className="reply-section">
+                  <h3>Assign ticket</h3>
+
+                  <form className="status-form" onSubmit={handleAssignTicket}>
+                    <label>
+                      Agent
+                      <select
+                        value={assignedAgentId}
+                        onChange={(event) => setAssignedAgentId(event.target.value)}
+                      >
+                        <option value="unassigned">Unassigned</option>
+                        <option value="2">Agent demo account</option>
+                      </select>
+                    </label>
+
+                    {assignmentError ? <p className="error-message">{assignmentError}</p> : null}
+
+                    {assignmentSuccess ? (
+                      <p className="success-message">{assignmentSuccess}</p>
+                    ) : null}
+
+                    <button
+                      className="primary-button button-reset"
+                      type="submit"
+                      disabled={assignmentLoading}
+                    >
+                      {assignmentLoading ? 'Assigning...' : 'Update assignment'}
+                    </button>
+                  </form>
+                </div>
+              ) : null}
 
               <div className="reply-section">
                 <h3>Update status</h3>

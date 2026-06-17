@@ -60,6 +60,10 @@ export type UpdateTicketStatusPayload = {
   status: TicketStatus;
 };
 
+export type AssignTicketPayload = {
+  assigned_agent_id: number | null;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function getTickets(token: string): Promise<Ticket[]> {
@@ -162,6 +166,30 @@ export async function updateTicketStatus(
 
   if (!response.ok) {
     throw new Error(data.message || 'Could not update ticket status.');
+  }
+
+  return (data as TicketResponse).data;
+}
+
+export async function assignTicket(
+  token: string,
+  ticketId: number,
+  payload: AssignTicketPayload,
+): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/assign`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Could not assign ticket.');
   }
 
   return (data as TicketResponse).data;
