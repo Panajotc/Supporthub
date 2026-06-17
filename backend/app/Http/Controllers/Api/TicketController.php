@@ -36,7 +36,34 @@ class TicketController extends Controller
             $query->where('customer_id', $user->id);
         }
 
-        return TicketResource::collection($query->paginate(15));
+        if ($request->filled('status')) {
+            $status = TicketStatus::tryFrom((string) $request->query('status'));
+
+            abort_if($status === null, 422, 'Invalid ticket status.');
+
+            $query->where('status', $status->value);
+        }
+
+        if ($request->filled('priority')) {
+            $priority = TicketPriority::tryFrom((string) $request->query('priority'));
+
+            abort_if($priority === null, 422, 'Invalid ticket priority.');
+
+            $query->where('priority', $priority->value);
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery
+                    ->where('public_id', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        return TicketResource::collection($query->paginate(15)->withQueryString());
     }
 
     public function store(StoreTicketRequest $request): JsonResponse

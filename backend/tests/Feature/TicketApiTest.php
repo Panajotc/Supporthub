@@ -42,6 +42,165 @@ class TicketApiTest extends TestCase
         ]);
     }
 
+    public function test_agent_can_filter_tickets_by_status(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $openTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-STATUS-OPEN',
+            'title' => 'Open ticket',
+            'status' => TicketStatus::Open->value,
+        ]);
+
+        $resolvedTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-STATUS-RESOLVED',
+            'title' => 'Resolved ticket',
+            'status' => TicketStatus::Resolved->value,
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?status=' . TicketStatus::Open->value);
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'public_id' => $openTicket->public_id,
+        ]);
+        $response->assertJsonMissing([
+            'public_id' => $resolvedTicket->public_id,
+        ]);
+    }
+
+    public function test_agent_can_filter_tickets_by_priority(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $criticalTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-PRIORITY-CRITICAL',
+            'title' => 'Critical priority ticket',
+            'priority' => TicketPriority::Critical->value,
+        ]);
+
+        $lowTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-PRIORITY-LOW',
+            'title' => 'Low priority ticket',
+            'priority' => TicketPriority::Low->value,
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?priority=' . TicketPriority::Critical->value);
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'public_id' => $criticalTicket->public_id,
+        ]);
+        $response->assertJsonMissing([
+            'public_id' => $lowTicket->public_id,
+        ]);
+    }
+
+    public function test_agent_can_search_tickets(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $billingTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SEARCH-BILLING',
+            'title' => 'Billing problem',
+            'description' => 'Customer cannot download invoice.',
+        ]);
+
+        $loginTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SEARCH-LOGIN',
+            'title' => 'Login problem',
+            'description' => 'Customer cannot reset password.',
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?search=billing');
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'public_id' => $billingTicket->public_id,
+        ]);
+        $response->assertJsonMissing([
+            'public_id' => $loginTicket->public_id,
+        ]);
+    }
+
+    public function test_agent_can_combine_ticket_filters(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $matchingTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-COMBINED-MATCH',
+            'title' => 'Billing outage',
+            'description' => 'Billing page is unavailable.',
+            'status' => TicketStatus::InProgress->value,
+            'priority' => TicketPriority::High->value,
+        ]);
+
+        $wrongStatusTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-COMBINED-WRONG-STATUS',
+            'title' => 'Billing outage',
+            'description' => 'Billing page is unavailable.',
+            'status' => TicketStatus::Open->value,
+            'priority' => TicketPriority::High->value,
+        ]);
+
+        $wrongPriorityTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-COMBINED-WRONG-PRIORITY',
+            'title' => 'Billing outage',
+            'description' => 'Billing page is unavailable.',
+            'status' => TicketStatus::InProgress->value,
+            'priority' => TicketPriority::Low->value,
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson(
+                '/api/tickets?search=billing&status=' .
+                TicketStatus::InProgress->value .
+                '&priority=' .
+                TicketPriority::High->value
+            );
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'public_id' => $matchingTicket->public_id,
+        ]);
+        $response->assertJsonMissing([
+            'public_id' => $wrongStatusTicket->public_id,
+        ]);
+        $response->assertJsonMissing([
+            'public_id' => $wrongPriorityTicket->public_id,
+        ]);
+    }
+
+    public function test_invalid_ticket_filters_return_validation_error(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+
+        $statusResponse = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?status=not_a_status');
+
+        $statusResponse->assertUnprocessable();
+        $statusResponse->assertJsonPath('message', 'Invalid ticket status.');
+
+        $priorityResponse = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?priority=not_a_priority');
+
+        $priorityResponse->assertUnprocessable();
+        $priorityResponse->assertJsonPath('message', 'Invalid ticket priority.');
+    }
+
     public function test_customer_can_create_ticket(): void
     {
         $customer = $this->createUser(UserRole::Customer);
