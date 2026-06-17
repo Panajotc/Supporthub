@@ -2,50 +2,84 @@
 
 ![Backend Tests](https://github.com/Panajotc/Supporthub/actions/workflows/backend-tests.yml/badge.svg)
 
-SupportHub is a production-style customer support ticketing API built as a portfolio project for technical support, application support, solutions engineering, and Laravel backend development roles.
+SupportHub is a full-stack customer support ticketing app built as a portfolio project for technical support, application support, solutions engineering, and full-stack web development roles.
 
-The project models a support workflow where customers create tickets, agents respond to issues, tickets move through statuses, and support teams can assign ownership.
+The project models a realistic support workflow where customers create tickets, agents respond to issues, tickets move through statuses, and support teams can assign ownership.
+
+## Demo Workflow
+
+SupportHub currently supports a working end-to-end support flow:
+
+* Login with seeded demo users
+* List tickets from the Laravel API
+* Create new tickets from the React frontend
+* View ticket details
+* Add ticket replies
+* Update ticket status
+* Assign tickets to an agent
+* Track ticket status history on the backend
 
 ## Tech Stack
 
-- Backend: Laravel 12, PHP 8.4
-- Database: MySQL 8
-- Authentication: Laravel Sanctum
-- Testing: PHPUnit / Laravel Feature Tests
-- CI: GitHub Actions
-- API style: REST JSON API
+### Backend
+
+* Laravel 12
+* PHP 8.4
+* MySQL 8
+* Laravel Sanctum
+* PHPUnit / Laravel Feature Tests
+* GitHub Actions CI
+* REST JSON API
+
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* CSS
 
 ## Current Features
 
-- Customer registration and login
-- Token-based API authentication
-- Role-based users: customer, agent, admin
-- Ticket creation
-- Ticket listing
-- Ticket detail view
-- Ticket replies
-- Ticket status updates
-- Ticket assignment to agents
-- Ticket status history tracking
-- API resources for consistent JSON responses
-- Automated backend test suite
-- GitHub Actions workflow for backend tests
+* Customer registration and login
+* Token-based API authentication
+* Role-based users: customer, agent, admin
+* Ticket creation
+* Ticket listing
+* Ticket detail view
+* Ticket replies
+* Ticket status updates
+* Ticket assignment to agents
+* Ticket status history tracking
+* API resources for consistent JSON responses
+* React frontend connected to the Laravel API
+* Automated backend test suite
+* GitHub Actions workflow for backend tests
 
 ## Backend API Endpoints
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| GET | `/api/health` | API health check |
-| POST | `/api/register` | Register a customer |
-| POST | `/api/login` | Login and receive an API token |
-| GET | `/api/me` | Get authenticated user |
-| POST | `/api/logout` | Logout and revoke current token |
-| GET | `/api/tickets` | List tickets |
-| POST | `/api/tickets` | Create a ticket |
-| GET | `/api/tickets/{ticket}` | View ticket details |
-| POST | `/api/tickets/{ticket}/replies` | Add a ticket reply |
-| PATCH | `/api/tickets/{ticket}/status` | Update ticket status |
-| PATCH | `/api/tickets/{ticket}/assign` | Assign ticket to an agent |
+| Method | Endpoint                        | Description                     |
+| ------ | ------------------------------- | ------------------------------- |
+| GET    | `/api/health`                   | API health check                |
+| POST   | `/api/register`                 | Register a customer             |
+| POST   | `/api/login`                    | Login and receive an API token  |
+| GET    | `/api/me`                       | Get authenticated user          |
+| POST   | `/api/logout`                   | Logout and revoke current token |
+| GET    | `/api/tickets`                  | List tickets                    |
+| POST   | `/api/tickets`                  | Create a ticket                 |
+| GET    | `/api/tickets/{ticket}`         | View ticket details             |
+| POST   | `/api/tickets/{ticket}/replies` | Add a ticket reply              |
+| PATCH  | `/api/tickets/{ticket}/status`  | Update ticket status            |
+| PATCH  | `/api/tickets/{ticket}/assign`  | Assign ticket to an agent       |
+
+## Demo Users
+
+The database seeder creates these demo users:
+
+| Role     | Email                      | Password   |
+| -------- | -------------------------- | ---------- |
+| Admin    | `admin@supporthub.test`    | `password` |
+| Agent    | `agent@supporthub.test`    | `password` |
+| Customer | `customer@supporthub.test` | `password` |
 
 ## Local Setup
 
@@ -55,6 +89,8 @@ Clone the repository:
 git clone https://github.com/Panajotc/Supporthub.git
 cd Supporthub
 ```
+
+## Backend Setup
 
 Install backend dependencies:
 
@@ -69,13 +105,19 @@ Create the environment file:
 cp .env.example .env
 ```
 
+On Windows Command Prompt, use:
+
+```cmd
+copy .env.example .env
+```
+
 Generate the Laravel app key:
 
 ```bash
 php artisan key:generate
 ```
 
-Configure your database in `.env`:
+Configure your database in `backend/.env`:
 
 ```env
 DB_CONNECTION=mysql
@@ -95,24 +137,53 @@ php artisan migrate:fresh --seed
 Start the API server:
 
 ```bash
-php artisan serve --host=127.0.0.1 --port=8080
+php artisan serve --host=127.0.0.1 --port=8080 --no-reload
 ```
 
 The API will be available at:
 
 ```txt
-http://127.0.0.1:8080
+http://127.0.0.1:8080/api
 ```
 
-## Demo Users
+## Frontend Setup
 
-The database seeder creates demo users:
+In a second terminal, install frontend dependencies:
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@supporthub.test` | `password` |
-| Agent | `agent@supporthub.test` | `password` |
-| Customer | `customer@supporthub.test` | `password` |
+```bash
+cd frontend
+npm install
+```
+
+Create the frontend environment file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows Command Prompt, use:
+
+```cmd
+copy .env.example .env
+```
+
+The frontend `.env` file should contain:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8080/api
+```
+
+Start the React development server:
+
+```bash
+npm run dev
+```
+
+The frontend will run at the Vite development URL shown in the terminal, usually:
+
+```txt
+http://localhost:5173
+```
 
 ## Running Tests
 
@@ -125,14 +196,23 @@ php artisan test
 
 Current test coverage includes:
 
-- Authentication API
-- Ticket listing
-- Ticket creation
-- Ticket detail view
-- Ticket replies
-- Ticket status updates
-- Ticket assignment
-- Role-based access restrictions
+* Authentication API
+* Ticket listing
+* Ticket creation
+* Ticket detail view
+* Ticket replies
+* Ticket status updates
+* Ticket assignment
+* Role-based access restrictions
+
+## Building the Frontend
+
+Run the frontend production build:
+
+```bash
+cd frontend
+npm run build
+```
 
 ## Continuous Integration
 
@@ -146,17 +226,21 @@ Workflow file:
 
 ## Project Status
 
-SupportHub is currently focused on the backend API. A React frontend will be added after the backend workflow is stable and well tested.
+SupportHub is an active MVP with a working Laravel backend and React frontend.
+
+The current version demonstrates a real-world support workflow with authentication, authorization, ticket management, replies, status updates, assignment, backend testing, and CI.
 
 ## Portfolio Purpose
 
-This project is designed to demonstrate practical backend engineering skills:
+This project is designed to demonstrate practical engineering skills:
 
-- Building REST APIs
-- Designing relational data models
-- Implementing authentication and authorization
-- Working with role-based workflows
-- Writing automated feature tests
-- Using Git and GitHub branch workflows
-- Running tests in CI
-- Documenting a project clearly
+* Building REST APIs
+* Designing relational data models
+* Implementing authentication and authorization
+* Working with role-based support workflows
+* Connecting a React frontend to a Laravel API
+* Managing frontend state with TypeScript
+* Writing automated feature tests
+* Using Git and GitHub branch workflows
+* Running tests in CI
+* Documenting a project clearly
