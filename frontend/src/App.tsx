@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import './App.css';
+import { getAgents } from './api/agents';
 import { login, type AuthUser } from './api/auth';
 import {
   assignTicket,
@@ -43,6 +44,10 @@ function App() {
   const [ticketSearch, setTicketSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
+
+  const [agents, setAgents] = useState<AuthUser[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedTicketLoading, setSelectedTicketLoading] = useState(false);
@@ -100,6 +105,7 @@ function App() {
     'Replies and status history',
     'Server-side ticket filtering',
     'Paginated ticket API',
+    'Dynamic agent assignment',
     'Automated tests',
     'GitHub Actions CI',
   ];
@@ -152,6 +158,32 @@ function App() {
   }, [token, user, ticketSearch, statusFilter, priorityFilter, currentTicketPage]);
 
   useEffect(() => {
+    async function loadAgents() {
+      if (!token || !user || user.role === 'customer') {
+        setAgents([]);
+        setAgentsError(null);
+        return;
+      }
+
+      setAgentsLoading(true);
+      setAgentsError(null);
+
+      try {
+        const loadedAgents = await getAgents(token);
+        setAgents(loadedAgents);
+      } catch (caughtError) {
+        setAgentsError(
+          caughtError instanceof Error ? caughtError.message : 'Could not load agents.',
+        );
+      } finally {
+        setAgentsLoading(false);
+      }
+    }
+
+    loadAgents();
+  }, [token, user]);
+
+  useEffect(() => {
     if (selectedTicket) {
       setNewTicketStatus(selectedTicket.status);
       setAssignedAgentId(
@@ -193,6 +225,8 @@ function App() {
     setTickets([]);
     setTicketPagination(null);
     setCurrentTicketPage(1);
+    setAgents([]);
+    setAgentsError(null);
     setSelectedTicket(null);
     setTicketSearch('');
     setStatusFilter('all');
@@ -409,10 +443,10 @@ function App() {
           <h2>API foundation ready</h2>
           <p>
             The Laravel backend supports authentication, tickets, replies, assignment,
-            policies, server-side filters, pagination, tests, and CI.
+            policies, server-side filters, pagination, dynamic agents, tests, and CI.
           </p>
 
-          <div className="status-pill">22 tests passing</div>
+          <div className="status-pill">25 tests passing</div>
         </div>
       </section>
 
@@ -437,7 +471,8 @@ function App() {
             <p>
               The frontend is using your saved token to load tickets, create new
               tickets, view ticket details, add replies, update statuses, assign
-              tickets, filter tickets, and paginate results through the backend API.
+              tickets to real agents, filter tickets, and paginate results through
+              the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -482,8 +517,9 @@ function App() {
             <h2>Tickets from the Laravel API.</h2>
             <p>
               This list is loaded from <code>GET /api/tickets</code>. Filters and
-              pagination are sent to the backend as query parameters. New tickets are
-              created with <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
+              pagination are sent to the backend as query parameters. Agents are
+              loaded from <code>GET /api/agents</code>. New tickets are created with{' '}
+              <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
               <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
               <code>POST /api/tickets/{'{id}'}/replies</code>. Status updates use{' '}
               <code>PATCH /api/tickets/{'{id}'}/status</code>. Assignments use{' '}
@@ -524,11 +560,25 @@ function App() {
                       <select
                         value={assignedAgentId}
                         onChange={(event) => setAssignedAgentId(event.target.value)}
+                        disabled={agentsLoading}
                       >
                         <option value="unassigned">Unassigned</option>
-                        <option value="2">Agent demo account</option>
+
+                        {agents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name} — {agent.email}
+                          </option>
+                        ))}
                       </select>
                     </label>
+
+                    {agentsLoading ? <p className="muted-message">Loading agents...</p> : null}
+
+                    {agentsError ? <p className="error-message">{agentsError}</p> : null}
+
+                    {!agentsLoading && !agentsError && agents.length === 0 ? (
+                      <p className="muted-message">No agents are available.</p>
+                    ) : null}
 
                     {assignmentError ? <p className="error-message">{assignmentError}</p> : null}
 
@@ -539,7 +589,7 @@ function App() {
                     <button
                       className="primary-button button-reset"
                       type="submit"
-                      disabled={assignmentLoading}
+                      disabled={assignmentLoading || agentsLoading}
                     >
                       {assignmentLoading ? 'Assigning...' : 'Update assignment'}
                     </button>
