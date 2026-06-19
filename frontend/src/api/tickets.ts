@@ -37,8 +37,24 @@ export type Ticket = {
   updated_at: string;
 };
 
+export type TicketPaginationMeta = {
+  current_page: number;
+  from: number | null;
+  last_page: number;
+  path: string;
+  per_page: number;
+  to: number | null;
+  total: number;
+};
+
 export type TicketListResponse = {
   data: Ticket[];
+  meta: TicketPaginationMeta;
+};
+
+export type TicketListResult = {
+  tickets: Ticket[];
+  meta: TicketPaginationMeta;
 };
 
 export type TicketResponse = {
@@ -68,6 +84,7 @@ export type TicketFilters = {
   search?: string;
   status?: TicketStatus | 'all';
   priority?: TicketPriority | 'all';
+  page?: number;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -75,7 +92,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export async function getTickets(
   token: string,
   filters: TicketFilters = {},
-): Promise<Ticket[]> {
+): Promise<TicketListResult> {
   const queryParams = new URLSearchParams();
 
   if (filters.search?.trim()) {
@@ -88,6 +105,10 @@ export async function getTickets(
 
   if (filters.priority && filters.priority !== 'all') {
     queryParams.set('priority', filters.priority);
+  }
+
+  if (filters.page && filters.page > 1) {
+    queryParams.set('page', String(filters.page));
   }
 
   const queryString = queryParams.toString();
@@ -109,7 +130,12 @@ export async function getTickets(
     throw new Error(data.message || 'Could not load tickets.');
   }
 
-  return (data as TicketListResponse).data;
+  const ticketListResponse = data as TicketListResponse;
+
+  return {
+    tickets: ticketListResponse.data,
+    meta: ticketListResponse.meta,
+  };
 }
 
 export async function getTicket(token: string, ticketId: number): Promise<Ticket> {

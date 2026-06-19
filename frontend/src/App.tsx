@@ -10,6 +10,7 @@ import {
   getTickets,
   updateTicketStatus,
   type Ticket,
+  type TicketPaginationMeta,
   type TicketPriority,
   type TicketStatus,
 } from './api/tickets';
@@ -34,6 +35,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketPagination, setTicketPagination] = useState<TicketPaginationMeta | null>(null);
+  const [currentTicketPage, setCurrentTicketPage] = useState(1);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
 
@@ -96,6 +99,7 @@ function App() {
     'Ticket workflow',
     'Replies and status history',
     'Server-side ticket filtering',
+    'Paginated ticket API',
     'Automated tests',
     'GitHub Actions CI',
   ];
@@ -107,22 +111,26 @@ function App() {
     setTicketSearch('');
     setStatusFilter('all');
     setPriorityFilter('all');
+    setCurrentTicketPage(1);
   }
 
-  async function reloadTickets(currentToken: string) {
-    const loadedTickets = await getTickets(currentToken, {
+  async function reloadTickets(currentToken: string, page = currentTicketPage) {
+    const result = await getTickets(currentToken, {
       search: ticketSearch,
       status: statusFilter,
       priority: priorityFilter,
+      page,
     });
 
-    setTickets(loadedTickets);
+    setTickets(result.tickets);
+    setTicketPagination(result.meta);
   }
 
   useEffect(() => {
     async function loadTickets() {
       if (!token || !user) {
         setTickets([]);
+        setTicketPagination(null);
         return;
       }
 
@@ -141,7 +149,7 @@ function App() {
     }
 
     loadTickets();
-  }, [token, user, ticketSearch, statusFilter, priorityFilter]);
+  }, [token, user, ticketSearch, statusFilter, priorityFilter, currentTicketPage]);
 
   useEffect(() => {
     if (selectedTicket) {
@@ -183,6 +191,8 @@ function App() {
     setToken(null);
     setUser(null);
     setTickets([]);
+    setTicketPagination(null);
+    setCurrentTicketPage(1);
     setSelectedTicket(null);
     setTicketSearch('');
     setStatusFilter('all');
@@ -399,7 +409,7 @@ function App() {
           <h2>API foundation ready</h2>
           <p>
             The Laravel backend supports authentication, tickets, replies, assignment,
-            policies, server-side filters, tests, and CI.
+            policies, server-side filters, pagination, tests, and CI.
           </p>
 
           <div className="status-pill">22 tests passing</div>
@@ -427,7 +437,7 @@ function App() {
             <p>
               The frontend is using your saved token to load tickets, create new
               tickets, view ticket details, add replies, update statuses, assign
-              tickets, and filter tickets through the backend API.
+              tickets, filter tickets, and paginate results through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -471,9 +481,9 @@ function App() {
             <p className="eyebrow">Ticket dashboard</p>
             <h2>Tickets from the Laravel API.</h2>
             <p>
-              This list is loaded from <code>GET /api/tickets</code>. Filters are
-              sent to the backend as query parameters. New tickets are created with{' '}
-              <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
+              This list is loaded from <code>GET /api/tickets</code>. Filters and
+              pagination are sent to the backend as query parameters. New tickets are
+              created with <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
               <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
               <code>POST /api/tickets/{'{id}'}/replies</code>. Status updates use{' '}
               <code>PATCH /api/tickets/{'{id}'}/status</code>. Assignments use{' '}
@@ -694,7 +704,10 @@ function App() {
                     <input
                       type="search"
                       value={ticketSearch}
-                      onChange={(event) => setTicketSearch(event.target.value)}
+                      onChange={(event) => {
+                        setTicketSearch(event.target.value);
+                        setCurrentTicketPage(1);
+                      }}
                       placeholder="Search by ID, title, or description"
                     />
                   </label>
@@ -703,9 +716,10 @@ function App() {
                     Status
                     <select
                       value={statusFilter}
-                      onChange={(event) =>
-                        setStatusFilter(event.target.value as TicketStatus | 'all')
-                      }
+                      onChange={(event) => {
+                        setStatusFilter(event.target.value as TicketStatus | 'all');
+                        setCurrentTicketPage(1);
+                      }}
                     >
                       <option value="all">All statuses</option>
                       <option value="open">Open</option>
@@ -720,9 +734,10 @@ function App() {
                     Priority
                     <select
                       value={priorityFilter}
-                      onChange={(event) =>
-                        setPriorityFilter(event.target.value as TicketPriority | 'all')
-                      }
+                      onChange={(event) => {
+                        setPriorityFilter(event.target.value as TicketPriority | 'all');
+                        setCurrentTicketPage(1);
+                      }}
                     >
                       <option value="all">All priorities</option>
                       <option value="low">Low</option>
@@ -735,7 +750,12 @@ function App() {
 
                 <div className="ticket-filter-actions">
                   <p>
-                    Showing <strong>{tickets.length}</strong> matching tickets.
+                    Showing{' '}
+                    <strong>
+                      {ticketPagination?.from ?? 0}-{ticketPagination?.to ?? 0}
+                    </strong>{' '}
+                    of <strong>{ticketPagination?.total ?? tickets.length}</strong> matching
+                    tickets.
                   </p>
 
                   <button
@@ -794,6 +814,39 @@ function App() {
                   </button>
                 ))}
               </div>
+
+              {ticketPagination && ticketPagination.last_page > 1 ? (
+                <div className="pagination-card">
+                  <button
+                    className="secondary-button button-reset"
+                    type="button"
+                    disabled={ticketsLoading || ticketPagination.current_page <= 1}
+                    onClick={() => setCurrentTicketPage((page) => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    Page <strong>{ticketPagination.current_page}</strong> of{' '}
+                    <strong>{ticketPagination.last_page}</strong>
+                  </span>
+
+                  <button
+                    className="secondary-button button-reset"
+                    type="button"
+                    disabled={
+                      ticketsLoading || ticketPagination.current_page >= ticketPagination.last_page
+                    }
+                    onClick={() =>
+                      setCurrentTicketPage((page) =>
+                        ticketPagination ? Math.min(ticketPagination.last_page, page + 1) : page,
+                      )
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
             </>
           )}
         </section>
