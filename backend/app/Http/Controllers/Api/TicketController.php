@@ -29,8 +29,7 @@ class TicketController extends Controller
         $user = $request->user();
 
         $query = Ticket::query()
-            ->with(['customer', 'assignedAgent'])
-            ->latest();
+            ->with(['customer', 'assignedAgent']);
 
         if ($user->role === UserRole::Customer) {
             $query->where('customer_id', $user->id);
@@ -62,6 +61,41 @@ class TicketController extends Controller
                     ->orWhere('description', 'like', "%{$search}%");
             });
         }
+
+        $sort = (string) $request->query('sort', 'newest');
+
+        abort_if(
+            ! in_array($sort, ['newest', 'oldest', 'priority_high', 'priority_low'], true),
+            422,
+            'Invalid ticket sort.'
+        );
+
+        match ($sort) {
+            'oldest' => $query->orderBy('created_at')->orderBy('id'),
+            'priority_high' => $query
+                ->orderByRaw(
+                    'CASE priority WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 WHEN ? THEN 4 ELSE 5 END',
+                    [
+                        TicketPriority::Critical->value,
+                        TicketPriority::High->value,
+                        TicketPriority::Medium->value,
+                        TicketPriority::Low->value,
+                    ],
+                )
+                ->latest(),
+            'priority_low' => $query
+                ->orderByRaw(
+                    'CASE priority WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 WHEN ? THEN 4 ELSE 5 END',
+                    [
+                        TicketPriority::Low->value,
+                        TicketPriority::Medium->value,
+                        TicketPriority::High->value,
+                        TicketPriority::Critical->value,
+                    ],
+                )
+                ->latest(),
+            default => $query->latest(),
+        };
 
         return TicketResource::collection($query->paginate(15)->withQueryString());
     }

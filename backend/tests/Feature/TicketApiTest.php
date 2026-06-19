@@ -182,6 +182,102 @@ class TicketApiTest extends TestCase
         ]);
     }
 
+    public function test_agent_can_sort_tickets_by_newest_and_oldest(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $oldTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-OLD',
+            'title' => 'Old ticket',
+        ]);
+
+        $newTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-NEW',
+            'title' => 'New ticket',
+        ]);
+
+        $oldTicket->forceFill([
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ])->save();
+
+        $newTicket->forceFill([
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->save();
+
+        $newestResponse = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?search=TKT-SORT&sort=newest');
+
+        $newestResponse->assertOk();
+        $newestResponse->assertJsonPath('data.0.public_id', $newTicket->public_id);
+
+        $oldestResponse = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?search=TKT-SORT&sort=oldest');
+
+        $oldestResponse->assertOk();
+        $oldestResponse->assertJsonPath('data.0.public_id', $oldTicket->public_id);
+    }
+
+    public function test_agent_can_sort_tickets_by_high_priority_first(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $lowTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-LOW',
+            'title' => 'Low priority ticket',
+            'priority' => TicketPriority::Low->value,
+        ]);
+
+        $criticalTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-CRITICAL',
+            'title' => 'Critical priority ticket',
+            'priority' => TicketPriority::Critical->value,
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?sort=priority_high');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.public_id', $criticalTicket->public_id);
+        $response->assertJsonFragment([
+            'public_id' => $lowTicket->public_id,
+        ]);
+    }
+
+    public function test_agent_can_sort_tickets_by_low_priority_first(): void
+    {
+        $agent = $this->createUser(UserRole::Agent);
+        $customer = $this->createUser(UserRole::Customer);
+
+        $criticalTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-CRITICAL-LOW-FIRST',
+            'title' => 'Critical priority ticket',
+            'priority' => TicketPriority::Critical->value,
+        ]);
+
+        $lowTicket = $this->createTicket($customer, [
+            'public_id' => 'TKT-SORT-LOW-FIRST',
+            'title' => 'Low priority ticket',
+            'priority' => TicketPriority::Low->value,
+        ]);
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?sort=priority_low');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.public_id', $lowTicket->public_id);
+        $response->assertJsonFragment([
+            'public_id' => $criticalTicket->public_id,
+        ]);
+    }
+
     public function test_invalid_ticket_filters_return_validation_error(): void
     {
         $agent = $this->createUser(UserRole::Agent);
@@ -199,6 +295,13 @@ class TicketApiTest extends TestCase
 
         $priorityResponse->assertUnprocessable();
         $priorityResponse->assertJsonPath('message', 'Invalid ticket priority.');
+
+        $sortResponse = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets?sort=not_a_sort');
+
+        $sortResponse->assertUnprocessable();
+        $sortResponse->assertJsonPath('message', 'Invalid ticket sort.');
     }
 
     public function test_customer_can_create_ticket(): void
