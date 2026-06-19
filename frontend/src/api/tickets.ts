@@ -9,6 +9,8 @@ export type TicketStatus =
 
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
+export type TicketSort = 'newest' | 'oldest' | 'priority_high' | 'priority_low';
+
 export type TicketReply = {
   id: number;
   ticket_id: number;
@@ -84,6 +86,7 @@ export type TicketFilters = {
   search?: string;
   status?: TicketStatus | 'all';
   priority?: TicketPriority | 'all';
+  sort?: TicketSort;
   page?: number;
 };
 
@@ -105,6 +108,10 @@ export async function getTickets(
 
   if (filters.priority && filters.priority !== 'all') {
     queryParams.set('priority', filters.priority);
+  }
+
+  if (filters.sort) {
+    queryParams.set('sort', filters.sort);
   }
 
   if (filters.page && filters.page > 1) {

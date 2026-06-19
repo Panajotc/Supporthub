@@ -13,6 +13,7 @@ import {
   type Ticket,
   type TicketPaginationMeta,
   type TicketPriority,
+  type TicketSort,
   type TicketStatus,
 } from './api/tickets';
 
@@ -44,6 +45,7 @@ function App() {
   const [ticketSearch, setTicketSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
+  const [ticketSort, setTicketSort] = useState<TicketSort>('newest');
 
   const [agents, setAgents] = useState<AuthUser[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -104,6 +106,7 @@ function App() {
     'Ticket workflow',
     'Replies and status history',
     'Server-side ticket filtering',
+    'Server-side ticket sorting',
     'Paginated ticket API',
     'Dynamic agent assignment',
     'Automated tests',
@@ -111,12 +114,16 @@ function App() {
   ];
 
   const hasActiveFilters =
-    ticketSearch.trim() !== '' || statusFilter !== 'all' || priorityFilter !== 'all';
+    ticketSearch.trim() !== '' ||
+    statusFilter !== 'all' ||
+    priorityFilter !== 'all' ||
+    ticketSort !== 'newest';
 
   function handleClearFilters() {
     setTicketSearch('');
     setStatusFilter('all');
     setPriorityFilter('all');
+    setTicketSort('newest');
     setCurrentTicketPage(1);
   }
 
@@ -125,6 +132,7 @@ function App() {
       search: ticketSearch,
       status: statusFilter,
       priority: priorityFilter,
+      sort: ticketSort,
       page,
     });
 
@@ -155,7 +163,7 @@ function App() {
     }
 
     loadTickets();
-  }, [token, user, ticketSearch, statusFilter, priorityFilter, currentTicketPage]);
+  }, [token, user, ticketSearch, statusFilter, priorityFilter, ticketSort, currentTicketPage]);
 
   useEffect(() => {
     async function loadAgents() {
@@ -231,6 +239,7 @@ function App() {
     setTicketSearch('');
     setStatusFilter('all');
     setPriorityFilter('all');
+    setTicketSort('newest');
     setCreateTicketSuccess(null);
     setCreateTicketError(null);
     setReplySuccess(null);
@@ -443,10 +452,11 @@ function App() {
           <h2>API foundation ready</h2>
           <p>
             The Laravel backend supports authentication, tickets, replies, assignment,
-            policies, server-side filters, pagination, dynamic agents, tests, and CI.
+            policies, server-side filters, sorting, pagination, dynamic agents, tests,
+            and CI.
           </p>
 
-          <div className="status-pill">25 tests passing</div>
+          <div className="status-pill">28 tests passing</div>
         </div>
       </section>
 
@@ -471,8 +481,8 @@ function App() {
             <p>
               The frontend is using your saved token to load tickets, create new
               tickets, view ticket details, add replies, update statuses, assign
-              tickets to real agents, filter tickets, and paginate results through
-              the backend API.
+              tickets to real agents, filter tickets, sort tickets, and paginate
+              results through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -516,8 +526,8 @@ function App() {
             <p className="eyebrow">Ticket dashboard</p>
             <h2>Tickets from the Laravel API.</h2>
             <p>
-              This list is loaded from <code>GET /api/tickets</code>. Filters and
-              pagination are sent to the backend as query parameters. Agents are
+              This list is loaded from <code>GET /api/tickets</code>. Filters, sorting,
+              and pagination are sent to the backend as query parameters. Agents are
               loaded from <code>GET /api/agents</code>. New tickets are created with{' '}
               <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
               <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
@@ -794,6 +804,22 @@ function App() {
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
                       <option value="critical">Critical</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Sort
+                    <select
+                      value={ticketSort}
+                      onChange={(event) => {
+                        setTicketSort(event.target.value as TicketSort);
+                        setCurrentTicketPage(1);
+                      }}
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="priority_high">Highest priority first</option>
+                      <option value="priority_low">Lowest priority first</option>
                     </select>
                   </label>
                 </div>
