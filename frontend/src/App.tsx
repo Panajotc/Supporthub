@@ -95,30 +95,28 @@ function App() {
     'Role-based authorization',
     'Ticket workflow',
     'Replies and status history',
+    'Server-side ticket filtering',
     'Automated tests',
     'GitHub Actions CI',
   ];
 
-  const normalizedTicketSearch = ticketSearch.trim().toLowerCase();
-
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesSearch =
-      normalizedTicketSearch === '' ||
-      ticket.public_id.toLowerCase().includes(normalizedTicketSearch) ||
-      ticket.title.toLowerCase().includes(normalizedTicketSearch) ||
-      ticket.description.toLowerCase().includes(normalizedTicketSearch);
-
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-
-    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+  const hasActiveFilters =
+    ticketSearch.trim() !== '' || statusFilter !== 'all' || priorityFilter !== 'all';
 
   function handleClearFilters() {
     setTicketSearch('');
     setStatusFilter('all');
     setPriorityFilter('all');
+  }
+
+  async function reloadTickets(currentToken: string) {
+    const loadedTickets = await getTickets(currentToken, {
+      search: ticketSearch,
+      status: statusFilter,
+      priority: priorityFilter,
+    });
+
+    setTickets(loadedTickets);
   }
 
   useEffect(() => {
@@ -132,8 +130,7 @@ function App() {
       setTicketsError(null);
 
       try {
-        const loadedTickets = await getTickets(token);
-        setTickets(loadedTickets);
+        await reloadTickets(token);
       } catch (caughtError) {
         setTicketsError(
           caughtError instanceof Error ? caughtError.message : 'Could not load tickets.',
@@ -144,7 +141,7 @@ function App() {
     }
 
     loadTickets();
-  }, [token, user]);
+  }, [token, user, ticketSearch, statusFilter, priorityFilter]);
 
   useEffect(() => {
     if (selectedTicket) {
@@ -187,6 +184,9 @@ function App() {
     setUser(null);
     setTickets([]);
     setSelectedTicket(null);
+    setTicketSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
     setCreateTicketSuccess(null);
     setCreateTicketError(null);
     setReplySuccess(null);
@@ -216,8 +216,7 @@ function App() {
         priority: newTicketPriority,
       });
 
-      const loadedTickets = await getTickets(token);
-      setTickets(loadedTickets);
+      await reloadTickets(token);
 
       setNewTicketTitle('');
       setNewTicketDescription('');
@@ -294,8 +293,7 @@ function App() {
       const updatedTicket = await getTicket(token, selectedTicket.id);
       setSelectedTicket(updatedTicket);
 
-      const loadedTickets = await getTickets(token);
-      setTickets(loadedTickets);
+      await reloadTickets(token);
 
       setNewReplyBody('');
       setNewReplyIsInternal(false);
@@ -328,8 +326,7 @@ function App() {
       const updatedTicket = await getTicket(token, selectedTicket.id);
       setSelectedTicket(updatedTicket);
 
-      const loadedTickets = await getTickets(token);
-      setTickets(loadedTickets);
+      await reloadTickets(token);
 
       setStatusSuccess('Ticket status updated successfully.');
     } catch (caughtError) {
@@ -361,8 +358,7 @@ function App() {
       const updatedTicket = await getTicket(token, selectedTicket.id);
       setSelectedTicket(updatedTicket);
 
-      const loadedTickets = await getTickets(token);
-      setTickets(loadedTickets);
+      await reloadTickets(token);
 
       setAssignmentSuccess('Ticket assignment updated successfully.');
     } catch (caughtError) {
@@ -402,11 +398,11 @@ function App() {
           <p className="card-label">Backend health</p>
           <h2>API foundation ready</h2>
           <p>
-            The Laravel backend already supports authentication, tickets, replies,
-            assignment, policies, tests, and CI.
+            The Laravel backend supports authentication, tickets, replies, assignment,
+            policies, server-side filters, tests, and CI.
           </p>
 
-          <div className="status-pill">17 tests passing</div>
+          <div className="status-pill">22 tests passing</div>
         </div>
       </section>
 
@@ -430,8 +426,8 @@ function App() {
             </p>
             <p>
               The frontend is using your saved token to load tickets, create new
-              tickets, view ticket details, add replies, update statuses, and assign
-              tickets through the backend API.
+              tickets, view ticket details, add replies, update statuses, assign
+              tickets, and filter tickets through the backend API.
             </p>
 
             <button className="secondary-button button-reset" onClick={handleLogout}>
@@ -475,9 +471,10 @@ function App() {
             <p className="eyebrow">Ticket dashboard</p>
             <h2>Tickets from the Laravel API.</h2>
             <p>
-              This list is loaded from <code>GET /api/tickets</code>. New tickets
-              are created with <code>POST /api/tickets</code>. Clicking a ticket
-              loads <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
+              This list is loaded from <code>GET /api/tickets</code>. Filters are
+              sent to the backend as query parameters. New tickets are created with{' '}
+              <code>POST /api/tickets</code>. Clicking a ticket loads{' '}
+              <code>GET /api/tickets/{'{id}'}</code>. Replies are sent with{' '}
               <code>POST /api/tickets/{'{id}'}/replies</code>. Status updates use{' '}
               <code>PATCH /api/tickets/{'{id}'}/status</code>. Assignments use{' '}
               <code>PATCH /api/tickets/{'{id}'}/assign</code>.
@@ -706,7 +703,9 @@ function App() {
                     Status
                     <select
                       value={statusFilter}
-                      onChange={(event) => setStatusFilter(event.target.value as TicketStatus | 'all')}
+                      onChange={(event) =>
+                        setStatusFilter(event.target.value as TicketStatus | 'all')
+                      }
                     >
                       <option value="all">All statuses</option>
                       <option value="open">Open</option>
@@ -721,7 +720,9 @@ function App() {
                     Priority
                     <select
                       value={priorityFilter}
-                      onChange={(event) => setPriorityFilter(event.target.value as TicketPriority | 'all')}
+                      onChange={(event) =>
+                        setPriorityFilter(event.target.value as TicketPriority | 'all')
+                      }
                     >
                       <option value="all">All priorities</option>
                       <option value="low">Low</option>
@@ -734,8 +735,7 @@ function App() {
 
                 <div className="ticket-filter-actions">
                   <p>
-                    Showing <strong>{filteredTickets.length}</strong> of <strong>{tickets.length}</strong>{' '}
-                    tickets.
+                    Showing <strong>{tickets.length}</strong> matching tickets.
                   </p>
 
                   <button
@@ -758,16 +758,16 @@ function App() {
 
               {ticketsError ? <p className="error-message">{ticketsError}</p> : null}
 
-              {!ticketsLoading && !ticketsError && tickets.length === 0 ? (
+              {!ticketsLoading && !ticketsError && tickets.length === 0 && !hasActiveFilters ? (
                 <p className="muted-message">No tickets found for this account.</p>
               ) : null}
 
-              {!ticketsLoading && !ticketsError && tickets.length > 0 && filteredTickets.length === 0 ? (
+              {!ticketsLoading && !ticketsError && tickets.length === 0 && hasActiveFilters ? (
                 <p className="muted-message">No tickets match the current filters.</p>
               ) : null}
 
               <div className="ticket-grid">
-                {filteredTickets.map((ticket) => (
+                {tickets.map((ticket) => (
                   <button
                     key={ticket.id}
                     className="ticket-card ticket-card-button"

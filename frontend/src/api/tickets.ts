@@ -64,10 +64,39 @@ export type AssignTicketPayload = {
   assigned_agent_id: number | null;
 };
 
+export type TicketFilters = {
+  search?: string;
+  status?: TicketStatus | 'all';
+  priority?: TicketPriority | 'all';
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export async function getTickets(token: string): Promise<Ticket[]> {
-  const response = await fetch(`${API_BASE_URL}/tickets`, {
+export async function getTickets(
+  token: string,
+  filters: TicketFilters = {},
+): Promise<Ticket[]> {
+  const queryParams = new URLSearchParams();
+
+  if (filters.search?.trim()) {
+    queryParams.set('search', filters.search.trim());
+  }
+
+  if (filters.status && filters.status !== 'all') {
+    queryParams.set('status', filters.status);
+  }
+
+  if (filters.priority && filters.priority !== 'all') {
+    queryParams.set('priority', filters.priority);
+  }
+
+  const queryString = queryParams.toString();
+
+  const url = queryString
+    ? `${API_BASE_URL}/tickets?${queryString}`
+    : `${API_BASE_URL}/tickets`;
+
+  const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${token}`,
