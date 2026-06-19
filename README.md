@@ -8,6 +8,20 @@ The project models a realistic support workflow where customers create tickets, 
 
 ## Demo Workflow
 
+SupportHub currently supports a working end-to-end support flow:
+
+* Login with seeded demo users
+* List tickets from the Laravel API
+* Create new tickets from the React frontend
+* View ticket details
+* Add ticket replies
+* Update ticket status
+* Assign tickets to real backend agents
+* Filter tickets by search, status, and priority
+* Sort tickets by newest, oldest, highest priority, or lowest priority
+* Paginate ticket results
+* Track ticket status history on the backend
+
 ## Screenshots
 
 ### Login Screen
@@ -21,18 +35,6 @@ The project models a realistic support workflow where customers create tickets, 
 ### Ticket Detail
 
 ![SupportHub ticket detail screen](docs/screenshots/ticket-detail.png)
-
-
-SupportHub currently supports a working end-to-end support flow:
-
-* Login with seeded demo users
-* List tickets from the Laravel API
-* Create new tickets from the React frontend
-* View ticket details
-* Add ticket replies
-* Update ticket status
-* Assign tickets to an agent
-* Track ticket status history on the backend
 
 ## Tech Stack
 
@@ -64,7 +66,11 @@ SupportHub currently supports a working end-to-end support flow:
 * Ticket replies
 * Ticket status updates
 * Ticket assignment to agents
+* Dynamic agent listing for assignment
 * Ticket status history tracking
+* Server-side ticket filtering
+* Server-side ticket sorting
+* Paginated ticket API responses
 * API resources for consistent JSON responses
 * React frontend connected to the Laravel API
 * Automated backend test suite
@@ -72,19 +78,41 @@ SupportHub currently supports a working end-to-end support flow:
 
 ## Backend API Endpoints
 
-| Method | Endpoint                        | Description                     |
-| ------ | ------------------------------- | ------------------------------- |
-| GET    | `/api/health`                   | API health check                |
-| POST   | `/api/register`                 | Register a customer             |
-| POST   | `/api/login`                    | Login and receive an API token  |
-| GET    | `/api/me`                       | Get authenticated user          |
-| POST   | `/api/logout`                   | Logout and revoke current token |
-| GET    | `/api/tickets`                  | List tickets                    |
-| POST   | `/api/tickets`                  | Create a ticket                 |
-| GET    | `/api/tickets/{ticket}`         | View ticket details             |
-| POST   | `/api/tickets/{ticket}/replies` | Add a ticket reply              |
-| PATCH  | `/api/tickets/{ticket}/status`  | Update ticket status            |
-| PATCH  | `/api/tickets/{ticket}/assign`  | Assign ticket to an agent       |
+| Method | Endpoint                        | Description                                      |
+| ------ | ------------------------------- | ------------------------------------------------ |
+| GET    | `/api/health`                   | API health check                                 |
+| POST   | `/api/register`                 | Register a customer                              |
+| POST   | `/api/login`                    | Login and receive an API token                   |
+| GET    | `/api/me`                       | Get authenticated user                           |
+| POST   | `/api/logout`                   | Logout and revoke current token                  |
+| GET    | `/api/agents`                   | List assignable agents for admins and agents     |
+| GET    | `/api/tickets`                  | List tickets with filtering, sorting, pagination |
+| POST   | `/api/tickets`                  | Create a ticket                                  |
+| GET    | `/api/tickets/{ticket}`         | View ticket details                              |
+| POST   | `/api/tickets/{ticket}/replies` | Add a ticket reply                               |
+| PATCH  | `/api/tickets/{ticket}/status`  | Update ticket status                             |
+| PATCH  | `/api/tickets/{ticket}/assign`  | Assign ticket to an agent                        |
+
+## Ticket Query Parameters
+
+The ticket list endpoint supports server-side filtering, sorting, and pagination.
+
+```txt
+GET /api/tickets?search=billing
+GET /api/tickets?status=open
+GET /api/tickets?priority=critical
+GET /api/tickets?sort=newest
+GET /api/tickets?sort=oldest
+GET /api/tickets?sort=priority_high
+GET /api/tickets?sort=priority_low
+GET /api/tickets?page=2
+```
+
+Parameters can be combined:
+
+```txt
+GET /api/tickets?search=billing&status=open&priority=high&sort=priority_high&page=1
+```
 
 ## Demo Users
 
@@ -212,13 +240,23 @@ php artisan test
 Current test coverage includes:
 
 * Authentication API
+* Agent listing API
 * Ticket listing
+* Ticket filtering
+* Ticket sorting
 * Ticket creation
 * Ticket detail view
 * Ticket replies
 * Ticket status updates
 * Ticket assignment
 * Role-based access restrictions
+
+Current backend test suite:
+
+```txt
+28 tests passing
+112 assertions
+```
 
 ## Building the Frontend
 
@@ -243,7 +281,7 @@ Workflow file:
 
 SupportHub is an active MVP with a working Laravel backend and React frontend.
 
-The current version demonstrates a real-world support workflow with authentication, authorization, ticket management, replies, status updates, assignment, backend testing, and CI.
+The current version demonstrates a real-world support workflow with authentication, authorization, ticket management, replies, status updates, dynamic assignment, server-side filtering, server-side sorting, pagination, backend testing, and CI.
 
 ## Portfolio Purpose
 
@@ -255,6 +293,7 @@ This project is designed to demonstrate practical engineering skills:
 * Working with role-based support workflows
 * Connecting a React frontend to a Laravel API
 * Managing frontend state with TypeScript
+* Implementing server-side filtering, sorting, and pagination
 * Writing automated feature tests
 * Using Git and GitHub branch workflows
 * Running tests in CI
