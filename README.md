@@ -11,16 +11,29 @@ The project models a realistic support workflow where customers create tickets, 
 SupportHub currently supports a working end-to-end support flow:
 
 * Login with seeded demo users
+* Navigate through separate React Router pages
 * List tickets from the Laravel API
 * Create new tickets from the React frontend
-* View ticket details
+* View ticket details on a dedicated ticket detail page
 * Add ticket replies
 * Update ticket status
 * Assign tickets to real backend agents
 * Filter tickets by search, status, and priority
 * Sort tickets by newest, oldest, highest priority, or lowest priority
 * Paginate ticket results
-* Track ticket status history on the backend
+* Track ticket status history on the backend and display it in the frontend
+
+## Frontend Routes
+
+The React frontend uses routed pages instead of keeping the full app on one screen:
+
+| Route                | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `/login`             | Landing page, demo login, backend status, users |
+| `/tickets`           | Ticket dashboard, filters, sorting, pagination  |
+| `/tickets/:ticketId` | Dedicated ticket detail workspace               |
+
+Authenticated ticket pages use a shared app layout with navigation and logout controls.
 
 ## Screenshots
 
@@ -51,6 +64,7 @@ SupportHub currently supports a working end-to-end support flow:
 ### Frontend
 
 * React
+* React Router
 * TypeScript
 * Vite
 * CSS
@@ -60,6 +74,8 @@ SupportHub currently supports a working end-to-end support flow:
 * Customer registration and login
 * Token-based API authentication
 * Role-based users: customer, agent, admin
+* React Router page navigation
+* Shared authenticated frontend layout
 * Ticket creation
 * Ticket listing
 * Ticket detail view
@@ -68,6 +84,7 @@ SupportHub currently supports a working end-to-end support flow:
 * Ticket assignment to agents
 * Dynamic agent listing for assignment
 * Ticket status history tracking
+* Ticket status history display in the frontend
 * Server-side ticket filtering
 * Server-side ticket sorting
 * Paginated ticket API responses
@@ -88,7 +105,7 @@ SupportHub currently supports a working end-to-end support flow:
 | GET    | `/api/agents`                   | List assignable agents for admins and agents     |
 | GET    | `/api/tickets`                  | List tickets with filtering, sorting, pagination |
 | POST   | `/api/tickets`                  | Create a ticket                                  |
-| GET    | `/api/tickets/{ticket}`         | View ticket details                              |
+| GET    | `/api/tickets/{ticket}`         | View ticket details with replies and history     |
 | POST   | `/api/tickets/{ticket}/replies` | Add a ticket reply                               |
 | PATCH  | `/api/tickets/{ticket}/status`  | Update ticket status                             |
 | PATCH  | `/api/tickets/{ticket}/assign`  | Assign ticket to an agent                        |
@@ -248,14 +265,15 @@ Current test coverage includes:
 * Ticket detail view
 * Ticket replies
 * Ticket status updates
+* Ticket status history API response
 * Ticket assignment
 * Role-based access restrictions
 
 Current backend test suite:
 
 ```txt
-28 tests passing
-112 assertions
+29 tests passing
+117 assertions
 ```
 
 ## Building the Frontend
@@ -281,7 +299,7 @@ Workflow file:
 
 SupportHub is an active MVP with a working Laravel backend and React frontend.
 
-The current version demonstrates a real-world support workflow with authentication, authorization, ticket management, replies, status updates, dynamic assignment, server-side filtering, server-side sorting, pagination, backend testing, and CI.
+The current version demonstrates a real-world support workflow with authentication, authorization, routed frontend pages, ticket management, replies, status updates, dynamic assignment, status history, server-side filtering, server-side sorting, pagination, backend testing, and CI.
 
 ## Portfolio Purpose
 
@@ -293,6 +311,7 @@ This project is designed to demonstrate practical engineering skills:
 * Working with role-based support workflows
 * Connecting a React frontend to a Laravel API
 * Managing frontend state with TypeScript
+* Building routed React pages
 * Implementing server-side filtering, sorting, and pagination
 * Writing automated feature tests
 * Using Git and GitHub branch workflows
