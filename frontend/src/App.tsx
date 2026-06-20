@@ -20,6 +20,10 @@ import {
 const TOKEN_STORAGE_KEY = 'supporthub_token';
 const USER_STORAGE_KEY = 'supporthub_user';
 
+function formatTicketStatus(status: TicketStatus | null) {
+  return status ? status.replaceAll('_', ' ') : 'created';
+}
+
 function App() {
   const [user, setUser] = useState<AuthUser | null>(() => {
     const storedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -456,7 +460,7 @@ function App() {
             and CI.
           </p>
 
-          <div className="status-pill">28 tests passing</div>
+          <div className="status-pill">29 tests passing</div>
         </div>
       </section>
 
@@ -637,6 +641,33 @@ function App() {
                     {statusLoading ? 'Updating...' : 'Update status'}
                   </button>
                 </form>
+              </div>
+
+              <div className="reply-section">
+                <h3>Status history</h3>
+
+                {selectedTicket.status_histories && selectedTicket.status_histories.length > 0 ? (
+                  <div className="reply-list">
+                    {selectedTicket.status_histories.map((history) => (
+                      <article key={history.id} className="reply-card">
+                        <div className="reply-header">
+                          <strong>
+                            {formatTicketStatus(history.old_status)} →{' '}
+                            {formatTicketStatus(history.new_status)}
+                          </strong>
+                          <span>{new Date(history.created_at).toLocaleString()}</span>
+                        </div>
+
+                        <p>
+                          Changed by{' '}
+                          <strong>{history.changed_by?.name ?? 'Unknown user'}</strong>
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted-message">No status changes recorded yet.</p>
+                )}
               </div>
 
               <div className="reply-section">

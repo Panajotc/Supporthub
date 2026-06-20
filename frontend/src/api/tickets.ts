@@ -21,6 +21,14 @@ export type TicketReply = {
   updated_at: string;
 };
 
+export type TicketStatusHistory = {
+  id: number;
+  old_status: TicketStatus | null;
+  new_status: TicketStatus;
+  changed_by: AuthUser | null;
+  created_at: string;
+};
+
 export type Ticket = {
   id: number;
   public_id: string;
@@ -33,6 +41,7 @@ export type Ticket = {
   created_by: AuthUser | null;
   updated_by: AuthUser | null;
   replies?: TicketReply[];
+  status_histories?: TicketStatusHistory[];
   resolved_at: string | null;
   closed_at: string | null;
   created_at: string;
