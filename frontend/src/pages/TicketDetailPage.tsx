@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
 
 import { getAgents } from '../api/agents';
 import type { AuthUser } from '../api/auth';
@@ -11,6 +10,7 @@ import {
   type Ticket,
   type TicketStatus,
 } from '../api/tickets';
+import AppLayout from '../components/AppLayout';
 
 type TicketDetailPageProps = {
   user: AuthUser;
@@ -23,7 +23,7 @@ function formatTicketStatus(status: TicketStatus | null) {
 }
 
 function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
-  const { ticketId } = useParams();
+  const ticketId = window.location.pathname.split('/').pop();
 
   const [agents, setAgents] = useState<AuthUser[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -214,28 +214,7 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
   }
 
   return (
-    <main className="app-shell">
-      <section className="login-section">
-        <div className="dashboard-preview">
-          <p className="card-label">Signed in</p>
-          <h3>Welcome, {user.name}</h3>
-          <p>
-            You are logged in as <strong>{user.role}</strong> using{' '}
-            <strong>{user.email}</strong>.
-          </p>
-
-          <div className="hero-actions">
-            <Link className="secondary-button" to="/tickets">
-              Back to tickets
-            </Link>
-
-            <button className="secondary-button button-reset" onClick={onLogout}>
-              Logout
-            </button>
-          </div>
-        </div>
-      </section>
-
+    <AppLayout user={user} onLogout={onLogout}>
       <section className="tickets-section">
         <div className="section-heading">
           <p className="eyebrow">Ticket detail</p>
@@ -438,7 +417,7 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
           </article>
         ) : null}
       </section>
-    </main>
+    </AppLayout>
   );
 }
 

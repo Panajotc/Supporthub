@@ -11,6 +11,7 @@ import {
   type TicketSort,
   type TicketStatus,
 } from '../api/tickets';
+import AppLayout from '../components/AppLayout';
 
 type TicketsPageProps = {
   user: AuthUser;
@@ -116,28 +117,7 @@ function TicketsPage({ user, token, onLogout }: TicketsPageProps) {
   }
 
   return (
-    <main className="app-shell">
-      <section className="login-section">
-        <div className="dashboard-preview">
-          <p className="card-label">Signed in</p>
-          <h3>Welcome, {user.name}</h3>
-          <p>
-            You are logged in as <strong>{user.role}</strong> using{' '}
-            <strong>{user.email}</strong>.
-          </p>
-
-          <div className="hero-actions">
-            <Link className="secondary-button" to="/login">
-              Home
-            </Link>
-
-            <button className="secondary-button button-reset" onClick={onLogout}>
-              Logout
-            </button>
-          </div>
-        </div>
-      </section>
-
+    <AppLayout user={user} onLogout={onLogout}>
       <section className="tickets-section">
         <div className="section-heading">
           <p className="eyebrow">Ticket dashboard</p>
@@ -357,7 +337,7 @@ function TicketsPage({ user, token, onLogout }: TicketsPageProps) {
           </div>
         ) : null}
       </section>
-    </main>
+    </AppLayout>
   );
 }
 
