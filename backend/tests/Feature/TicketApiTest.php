@@ -447,6 +447,29 @@ class TicketApiTest extends TestCase
         ]);
     }
 
+    public function test_ticket_detail_includes_status_history(): void
+    {
+        $customer = $this->createUser(UserRole::Customer);
+        $agent = $this->createUser(UserRole::Agent);
+        $ticket = $this->createTicket($customer);
+
+        $this
+            ->withTokenFor($agent)
+            ->patchJson('/api/tickets/' . $ticket->id . '/status', [
+                'status' => TicketStatus::InProgress->value,
+            ])
+            ->assertOk();
+
+        $response = $this
+            ->withTokenFor($agent)
+            ->getJson('/api/tickets/' . $ticket->id);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.status_histories.0.old_status', TicketStatus::Open->value);
+        $response->assertJsonPath('data.status_histories.0.new_status', TicketStatus::InProgress->value);
+        $response->assertJsonPath('data.status_histories.0.changed_by.id', $agent->id);
+    }
+
     public function test_customer_cannot_assign_ticket(): void
     {
         $customer = $this->createUser(UserRole::Customer);

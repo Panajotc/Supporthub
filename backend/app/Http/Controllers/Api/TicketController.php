@@ -125,7 +125,14 @@ class TicketController extends Controller
             'changed_by' => $user->id,
         ]);
 
-        $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
+        $ticket->load([
+            'customer',
+            'assignedAgent',
+            'creator',
+            'updater',
+            'replies.user',
+            'statusHistories.changedBy',
+        ]);
 
         return response()->json([
             'message' => 'Ticket created successfully.',
@@ -137,7 +144,14 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
+        $ticket->load([
+            'customer',
+            'assignedAgent',
+            'creator',
+            'updater',
+            'replies.user',
+            'statusHistories.changedBy',
+        ]);
 
         return new TicketResource($ticket);
     }
@@ -179,7 +193,14 @@ class TicketController extends Controller
             'changed_by' => $user->id,
         ]);
 
-        $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
+        $ticket->load([
+            'customer',
+            'assignedAgent',
+            'creator',
+            'updater',
+            'replies.user',
+            'statusHistories.changedBy',
+        ]);
 
         return response()->json([
             'message' => 'Ticket status updated successfully.',
@@ -192,8 +213,29 @@ class TicketController extends Controller
         $this->authorize('assign', $ticket);
 
         $user = $request->user();
+        $assignedAgentId = $request->validated('assigned_agent_id');
 
-        $assignedAgent = User::query()->findOrFail($request->validated('assigned_agent_id'));
+        if ($assignedAgentId === null) {
+            $ticket->assigned_agent_id = null;
+            $ticket->updated_by = $user->id;
+            $ticket->save();
+
+            $ticket->load([
+                'customer',
+                'assignedAgent',
+                'creator',
+                'updater',
+                'replies.user',
+                'statusHistories.changedBy',
+            ]);
+
+            return response()->json([
+                'message' => 'Ticket assigned successfully.',
+                'ticket' => new TicketResource($ticket),
+            ]);
+        }
+
+        $assignedAgent = User::query()->findOrFail($assignedAgentId);
 
         if ($assignedAgent->role !== UserRole::Agent) {
             abort(422, 'Tickets can only be assigned to agents.');
@@ -203,7 +245,14 @@ class TicketController extends Controller
         $ticket->updated_by = $user->id;
         $ticket->save();
 
-        $ticket->load(['customer', 'assignedAgent', 'creator', 'updater', 'replies.user']);
+        $ticket->load([
+            'customer',
+            'assignedAgent',
+            'creator',
+            'updater',
+            'replies.user',
+            'statusHistories.changedBy',
+        ]);
 
         return response()->json([
             'message' => 'Ticket assigned successfully.',

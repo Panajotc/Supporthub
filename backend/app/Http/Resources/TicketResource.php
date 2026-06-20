@@ -24,6 +24,9 @@ class TicketResource extends JsonResource
             'created_by' => new UserResource($this->whenLoaded('creator')),
             'updated_by' => new UserResource($this->whenLoaded('updater')),
             'replies' => TicketReplyResource::collection($this->whenLoaded('replies')),
+            'status_histories' => TicketStatusHistoryResource::collection(
+                $this->whenLoaded('statusHistories')
+            ),
             'resolved_at' => $this->resolved_at?->toISOString(),
             'closed_at' => $this->closed_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
