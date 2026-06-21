@@ -21,6 +21,10 @@ function AppLayout({ user, onLogout, children }: AppLayoutProps) {
         </div>
 
         <div className="hero-actions">
+          <Link className="secondary-button" to="/dashboard">
+            Dashboard
+          </Link>
+
           <Link className="secondary-button" to="/tickets">
             Tickets
           </Link>

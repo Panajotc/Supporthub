@@ -3,9 +3,10 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import './App.css';
 import { login, type AuthUser } from './api/auth';
+import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
-import TicketsPage from './pages/TicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
+import TicketsPage from './pages/TicketsPage';
 
 const TOKEN_STORAGE_KEY = 'supporthub_token';
 const USER_STORAGE_KEY = 'supporthub_user';
@@ -65,7 +66,7 @@ function App() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to={user && token ? '/tickets' : '/login'} replace />}
+        element={<Navigate to={user && token ? '/dashboard' : '/login'} replace />}
       />
 
       <Route
@@ -82,6 +83,17 @@ function App() {
             onLogin={handleLogin}
             onLogout={handleLogout}
           />
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          user && token ? (
+            <DashboardPage token={token} user={user} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       />
 

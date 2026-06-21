@@ -648,4 +648,43 @@ button:disabled {
     align-items: flex-start;
     flex-direction: column;
   }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stat-card {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
+}
+
+.stat-card strong {
+  display: block;
+  margin: 0.25rem 0;
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.stat-card span {
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
 }
