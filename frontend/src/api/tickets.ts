@@ -1,4 +1,5 @@
 import type { AuthUser } from './auth';
+import type { TicketAttachment } from './attachments';
 
 export type TicketStatus =
   | 'open'
@@ -41,6 +42,7 @@ export type Ticket = {
   created_by: AuthUser | null;
   updated_by: AuthUser | null;
   replies?: TicketReply[];
+  attachments?: TicketAttachment[];
   status_histories?: TicketStatusHistory[];
   resolved_at: string | null;
   closed_at: string | null;

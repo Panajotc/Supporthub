@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { getAgents } from '../api/agents';
 import type { AuthUser } from '../api/auth';
+import { uploadTicketAttachment } from '../api/attachments';
 import {
   assignTicket,
   createTicketReply,
@@ -20,6 +21,18 @@ type TicketDetailPageProps = {
 
 function formatTicketStatus(status: TicketStatus | null) {
   return status ? status.replaceAll('_', ' ') : 'created';
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
@@ -52,6 +65,11 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const [assignmentSuccess, setAssignmentSuccess] = useState<string | null>(null);
 
+  const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null);
+  const [attachmentLoading, setAttachmentLoading] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [attachmentSuccess, setAttachmentSuccess] = useState<string | null>(null);
+
   const numericTicketId = Number(ticketId);
 
   async function reloadTicket() {
@@ -74,6 +92,8 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
       setStatusError(null);
       setAssignmentSuccess(null);
       setAssignmentError(null);
+      setAttachmentSuccess(null);
+      setAttachmentError(null);
 
       try {
         await reloadTicket();
@@ -213,6 +233,38 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
     }
   }
 
+  async function handleUploadAttachment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedTicket) {
+      setAttachmentError('You must select a ticket before uploading an attachment.');
+      return;
+    }
+
+    if (!selectedAttachment) {
+      setAttachmentError('Choose a file before uploading.');
+      return;
+    }
+
+    setAttachmentLoading(true);
+    setAttachmentError(null);
+    setAttachmentSuccess(null);
+
+    try {
+      await uploadTicketAttachment(token, selectedTicket.id, selectedAttachment);
+      await reloadTicket();
+
+      setSelectedAttachment(null);
+      setAttachmentSuccess('Attachment uploaded successfully.');
+    } catch (caughtError) {
+      setAttachmentError(
+        caughtError instanceof Error ? caughtError.message : 'Could not upload attachment.',
+      );
+    } finally {
+      setAttachmentLoading(false);
+    }
+  }
+
   return (
     <AppLayout user={user} token={token} onLogout={onLogout}>
       <section className="tickets-section">
@@ -221,7 +273,7 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
           <h2>Single ticket workspace.</h2>
           <p>
             This page loads one ticket from <code>GET /api/tickets/{'{id}'}</code>.
-            Replies, assignment, status updates, and status history are managed here.
+            Replies, assignment, status updates, attachments, and status history are managed here.
           </p>
         </div>
 
@@ -326,6 +378,82 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
                 </form>
               </div>
             ) : null}
+
+            <div className="reply-section">
+              <h3>Attachments</h3>
+
+              <form className="status-form" onSubmit={handleUploadAttachment}>
+                <label>
+                  Upload file
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.log"
+                    onChange={(event) => {
+                      setSelectedAttachment(event.target.files?.[0] ?? null);
+                      setAttachmentError(null);
+                      setAttachmentSuccess(null);
+                    }}
+                  />
+                </label>
+
+                <p className="muted-message">
+                  Allowed files: images, PDFs, text files, and logs. Max size: 5 MB.
+                </p>
+
+                {selectedAttachment ? (
+                  <p className="muted-message">
+                    Selected: {selectedAttachment.name} ({formatFileSize(selectedAttachment.size)})
+                  </p>
+                ) : null}
+
+                {attachmentError ? <p className="error-message">{attachmentError}</p> : null}
+
+                {attachmentSuccess ? (
+                  <p className="success-message">{attachmentSuccess}</p>
+                ) : null}
+
+                <button
+                  className="primary-button button-reset"
+                  type="submit"
+                  disabled={attachmentLoading || !selectedAttachment}
+                >
+                  {attachmentLoading ? 'Uploading...' : 'Upload attachment'}
+                </button>
+              </form>
+
+              {selectedTicket.attachments && selectedTicket.attachments.length > 0 ? (
+                <div className="reply-list">
+                  {selectedTicket.attachments.map((attachment) => (
+                    <article key={attachment.id} className="reply-card">
+                      <div className="reply-header">
+                        <strong>{attachment.original_name}</strong>
+                        <span>{new Date(attachment.created_at).toLocaleString()}</span>
+                      </div>
+
+                      <p>
+                        Uploaded by{' '}
+                        <strong>{attachment.uploaded_by?.name ?? 'Unknown user'}</strong>
+                      </p>
+
+                      <p className="muted-message">
+                        {attachment.mime_type} · {formatFileSize(attachment.size)}
+                      </p>
+
+                      <a
+                        className="secondary-button"
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open file
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted-message">No attachments uploaded yet.</p>
+              )}
+            </div>
 
             <div className="reply-section">
               <h3>Status history</h3>

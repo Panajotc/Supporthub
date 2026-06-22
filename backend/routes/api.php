@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\TicketAttachmentController;
 use App\Http\Controllers\Api\TicketNotificationController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AgentController;
@@ -22,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::post('/tickets/{ticket}/attachments', [TicketAttachmentController::class, 'store']);
     Route::get('/notifications', TicketNotificationController::class);
     Route::get('/agents', [AgentController::class, 'index']);
     Route::get('/dashboard/stats', DashboardController::class);

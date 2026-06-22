@@ -126,14 +126,7 @@ class TicketController extends Controller
             'changed_by' => $user->id,
         ]);
 
-        $ticket->load([
-            'customer',
-            'assignedAgent',
-            'creator',
-            'updater',
-            'replies.user',
-            'statusHistories.changedBy',
-        ]);
+        $ticket->load($this->ticketDetailRelations());
 
         return response()->json([
             'message' => 'Ticket created successfully.',
@@ -145,14 +138,7 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load([
-            'customer',
-            'assignedAgent',
-            'creator',
-            'updater',
-            'replies.user',
-            'statusHistories.changedBy',
-        ]);
+        $ticket->load($this->ticketDetailRelations());
 
         return new TicketResource($ticket);
     }
@@ -206,14 +192,7 @@ class TicketController extends Controller
             'Ticket ' . $ticket->public_id . ' status changed to ' . $newStatus->value . '.'
         );
 
-        $ticket->load([
-            'customer',
-            'assignedAgent',
-            'creator',
-            'updater',
-            'replies.user',
-            'statusHistories.changedBy',
-        ]);
+        $ticket->load($this->ticketDetailRelations());
 
         return response()->json([
             'message' => 'Ticket status updated successfully.',
@@ -233,14 +212,7 @@ class TicketController extends Controller
             $ticket->updated_by = $user->id;
             $ticket->save();
 
-            $ticket->load([
-                'customer',
-                'assignedAgent',
-                'creator',
-                'updater',
-                'replies.user',
-                'statusHistories.changedBy',
-            ]);
+            $ticket->load($this->ticketDetailRelations());
 
             return response()->json([
                 'message' => 'Ticket assigned successfully.',
@@ -265,14 +237,7 @@ class TicketController extends Controller
             'Ticket ' . $ticket->public_id . ' was assigned to you.'
         );
 
-        $ticket->load([
-            'customer',
-            'assignedAgent',
-            'creator',
-            'updater',
-            'replies.user',
-            'statusHistories.changedBy',
-        ]);
+        $ticket->load($this->ticketDetailRelations());
 
         return response()->json([
             'message' => 'Ticket assigned successfully.',
@@ -287,6 +252,22 @@ class TicketController extends Controller
         } while (Ticket::query()->where('public_id', $publicId)->exists());
 
         return $publicId;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function ticketDetailRelations(): array
+    {
+        return [
+            'customer',
+            'assignedAgent',
+            'creator',
+            'updater',
+            'replies.user',
+            'attachments.uploader',
+            'statusHistories.changedBy',
+        ];
     }
 
     private function createNotification(
