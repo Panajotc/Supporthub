@@ -11,6 +11,7 @@ use App\Http\Requests\Tickets\StoreTicketRequest;
 use App\Http\Requests\Tickets\UpdateTicketStatusRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
+use App\Models\TicketNotification;
 use App\Models\TicketStatusHistory;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -193,6 +194,18 @@ class TicketController extends Controller
             'changed_by' => $user->id,
         ]);
 
+        $this->notifyCustomer(
+            $ticket,
+            'status_changed',
+            'Ticket ' . $ticket->public_id . ' status changed to ' . $newStatus->value . '.'
+        );
+
+        $this->notifyAssignedAgent(
+            $ticket,
+            'status_changed',
+            'Ticket ' . $ticket->public_id . ' status changed to ' . $newStatus->value . '.'
+        );
+
         $ticket->load([
             'customer',
             'assignedAgent',
@@ -245,6 +258,13 @@ class TicketController extends Controller
         $ticket->updated_by = $user->id;
         $ticket->save();
 
+        $this->createNotification(
+            $assignedAgent->id,
+            $ticket,
+            'ticket_assigned',
+            'Ticket ' . $ticket->public_id . ' was assigned to you.'
+        );
+
         $ticket->load([
             'customer',
             'assignedAgent',
@@ -267,5 +287,31 @@ class TicketController extends Controller
         } while (Ticket::query()->where('public_id', $publicId)->exists());
 
         return $publicId;
+    }
+
+    private function createNotification(
+        int $userId,
+        Ticket $ticket,
+        string $type,
+        string $message
+    ): void {
+        TicketNotification::query()->create([
+            'user_id' => $userId,
+            'ticket_id' => $ticket->id,
+            'type' => $type,
+            'message' => $message,
+        ]);
+    }
+
+    private function notifyCustomer(Ticket $ticket, string $type, string $message): void
+    {
+        $this->createNotification($ticket->customer_id, $ticket, $type, $message);
+    }
+
+    private function notifyAssignedAgent(Ticket $ticket, string $type, string $message): void
+    {
+        if ($ticket->assigned_agent_id) {
+            $this->createNotification($ticket->assigned_agent_id, $ticket, $type, $message);
+        }
     }
 }

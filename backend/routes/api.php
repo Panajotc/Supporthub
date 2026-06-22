@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\TicketNotificationController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AuthController;
@@ -21,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::get('/notifications', TicketNotificationController::class);
     Route::get('/agents', [AgentController::class, 'index']);
     Route::get('/dashboard/stats', DashboardController::class);
     Route::get('/tickets', [TicketController::class, 'index']);

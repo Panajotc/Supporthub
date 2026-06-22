@@ -214,7 +214,7 @@ function TicketDetailPage({ user, token, onLogout }: TicketDetailPageProps) {
   }
 
   return (
-    <AppLayout user={user} onLogout={onLogout}>
+    <AppLayout user={user} token={token} onLogout={onLogout}>
       <section className="tickets-section">
         <div className="section-heading">
           <p className="eyebrow">Ticket detail</p>

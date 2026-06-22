@@ -35,7 +35,7 @@ function DashboardPage({ token, user, onLogout }: DashboardPageProps) {
   }, [token]);
 
   return (
-    <AppLayout user={user} onLogout={onLogout}>
+    <AppLayout user={user} token={token} onLogout={onLogout}>
       <section className="panel">
         <div className="section-heading">
           <div>

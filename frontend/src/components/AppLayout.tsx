@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
 
 import type { AuthUser } from '../api/auth';
+import NotificationsPanel from './NotificationsPanel';
 
 type AppLayoutProps = {
   user: AuthUser;
+  token: string;
   onLogout: () => void;
   children: React.ReactNode;
 };
 
-function AppLayout({ user, onLogout, children }: AppLayoutProps) {
+function AppLayout({ user, token, onLogout, children }: AppLayoutProps) {
   return (
     <main className="app-shell">
       <header className="dashboard-preview">
@@ -38,6 +40,8 @@ function AppLayout({ user, onLogout, children }: AppLayoutProps) {
           </button>
         </div>
       </header>
+
+      <NotificationsPanel token={token} />
 
       {children}
     </main>
