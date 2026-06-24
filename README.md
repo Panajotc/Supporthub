@@ -26,6 +26,65 @@ SupportHub currently supports a working end-to-end support flow:
 * View recent in-app ticket notifications
 * Upload and view ticket file attachments
 
+## Architecture Overview
+
+SupportHub uses a simple full-stack architecture:
+
+```txt
+React + TypeScript frontend
+        |
+        v
+Laravel REST API
+        |
+        v
+MySQL database
+
+GitHub Actions
+        |
+        v
+Automated backend tests
+```
+
+### Application Flow
+
+* The React frontend handles authentication, routing, ticket management UI, dashboard views, notifications display, and file upload forms.
+* The Laravel backend exposes REST API endpoints for authentication, tickets, dashboard stats, notifications, agents, replies, status updates, assignment, and attachments.
+* MySQL stores users, tickets, replies, status histories, notifications, and attachment metadata.
+* Laravel Storage stores uploaded files and exposes public file links through the storage symlink.
+* GitHub Actions runs backend tests automatically on pushes and pull requests.
+
+## Project Structure
+
+```txt
+Supporthub/
+├── backend/                  # Laravel API application
+│   ├── app/
+│   │   ├── Enums/            # Ticket status, priority, and user role enums
+│   │   ├── Http/
+│   │   │   ├── Controllers/  # API controllers
+│   │   │   ├── Requests/     # Form request validation
+│   │   │   └── Resources/    # JSON API resources
+│   │   ├── Models/           # Eloquent models
+│   │   └── Policies/         # Authorization policies
+│   ├── database/
+│   │   ├── factories/
+│   │   ├── migrations/
+│   │   └── seeders/
+│   ├── routes/
+│   │   └── api.php
+│   └── tests/
+│       └── Feature/          # Backend feature tests
+├── frontend/                 # React + TypeScript frontend
+│   ├── src/
+│   │   ├── api/              # Typed API clients
+│   │   ├── components/       # Shared UI components
+│   │   └── pages/            # Routed pages
+├── docs/
+│   └── screenshots/          # README screenshots
+└── .github/
+    └── workflows/            # GitHub Actions CI
+```
+
 ## Frontend Routes
 
 The React frontend uses routed pages instead of keeping the full app on one screen:
@@ -445,6 +504,33 @@ Workflow file:
 ```txt
 .github/workflows/backend-tests.yml
 ```
+
+## Deployment
+
+SupportHub is not deployed to a public URL yet.
+
+The current focus is on backend correctness, frontend workflow, automated testing, and portfolio-quality documentation.
+
+A future improvement would be deploying the frontend and backend to a public environment so recruiters or interviewers can open the project live from a browser.
+
+Example future deployment URL:
+
+```txt
+https://supporthub.panajotc.dev
+```
+
+## Future Improvements
+
+Possible next improvements include:
+
+* Public deployment
+* Read/unread notification states
+* Attachment previews for images and PDFs
+* Dashboard charts
+* Richer search and filtering
+* Admin user management
+* Email notification integration
+* Better production logging and monitoring
 
 ## Project Status
 
