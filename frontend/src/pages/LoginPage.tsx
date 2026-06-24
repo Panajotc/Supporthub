@@ -46,8 +46,11 @@ function LoginPage({
   const backendFeatures = [
     'Token authentication',
     'Role-based authorization',
+    'Dashboard metrics',
     'Ticket workflow',
     'Replies and status history',
+    'Simulated notifications',
+    'File attachments',
     'Server-side ticket filtering',
     'Server-side ticket sorting',
     'Paginated ticket API',
@@ -66,7 +69,8 @@ function LoginPage({
 
           <p className="hero-copy">
             SupportHub is a portfolio SaaS project with a Laravel API, role-based
-            workflows, automated tests, CI, and a React frontend.
+            workflows, dashboard metrics, notifications, file attachments, automated
+            tests, CI, and a React frontend.
           </p>
 
           <div className="hero-actions">
@@ -85,11 +89,11 @@ function LoginPage({
           <h2>API foundation ready</h2>
           <p>
             The Laravel backend supports authentication, tickets, replies, assignment,
-            policies, server-side filters, sorting, pagination, dynamic agents, tests,
-            and CI.
+            dashboard stats, notifications, file attachments, policies, server-side
+            filters, sorting, pagination, dynamic agents, tests, and CI.
           </p>
 
-          <div className="status-pill">29 tests passing</div>
+          <div className="status-pill">39 tests passing</div>
         </div>
       </section>
 
@@ -112,12 +116,16 @@ function LoginPage({
               <strong>{user.email}</strong>.
             </p>
             <p>
-              Continue to the ticket dashboard to create, filter, sort, assign, and
-              manage support tickets.
+              Continue to the support workspace to view dashboard metrics, create,
+              filter, sort, assign, and manage support tickets.
             </p>
 
             <div className="hero-actions">
-              <Link className="primary-button" to="/tickets">
+              <Link className="primary-button" to="/dashboard">
+                Open dashboard
+              </Link>
+
+              <Link className="secondary-button" to="/tickets">
                 Open tickets
               </Link>
 
@@ -162,8 +170,9 @@ function LoginPage({
           <p className="eyebrow">Backend status</p>
           <h2>Strong foundation before UI polish.</h2>
           <p>
-            The frontend is starting from a stable backend instead of guessing what
-            the API will do later.
+            The frontend is built on a tested Laravel API with authentication,
+            authorization, ticket workflows, dashboard metrics, notifications, and
+            attachment uploads.
           </p>
         </div>
 
